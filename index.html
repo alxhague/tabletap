@@ -175,6 +175,11 @@ button.mode.on b::after{content:" ✓";color:var(--bust)}
         <button class="mode" id="m-ffa"><b>Free For All</b><span>Anyone taps any time. Every tap can bust, and the odds only go up. Stop tapping to end the round.</span></button>
         <button class="mode" id="m-hands"><b>Throw Hands</b><span>3-2-1, show fingers, count up in order. Cross the bust line and the odds climb.</span></button>
       </div>
+      <div class="eyebrow" style="text-align:left" id="bustLabel">Free for all · on a bust</div>
+      <div class="modes" id="bustOpts">
+        <button class="mode" id="b-knock"><b>That player is out</b><span>The round keeps going for everyone else. Odds keep climbing.</span></button>
+        <button class="mode" id="b-end"><b>Round ends</b><span>One bust and everyone banks what they have.</span></button>
+      </div>
       <p class="hint" id="modeNote"></p>
       <button id="closeSettings">Done</button>
     </div>
@@ -204,7 +209,7 @@ button.mode.on b::after{content:" ✓";color:var(--bust)}
       <ol>
         <li><b>No order, no hands.</b> Anyone taps their spot whenever they like.</li>
         <li><b>Watch the odds.</b> The middle shows the chance the next tap busts. It starts tiny and climbs with every tap, at a different pace each round.</li>
-        <li><b>Bank or bust.</b> Each tap you land is a point. Bust and you get zero for the round.</li>
+        <li><b>Bank or bust.</b> Each tap you land is a point. Bust and you get zero for the round and sit out the rest of it while everyone else keeps going. (Settings can make a bust end the round instead.)</li>
         <li><b>Bonus taps.</b> Now and then a yellow tag pops up: the next tap is worth extra. Same bust odds as any other tap.</li>
         <li><b>Quiet ends it.</b> If nobody taps for 10 seconds, a 3-2-1 runs. Tap to keep going, or let it finish and everyone banks.</li>
       </ol>
@@ -219,7 +224,7 @@ const NAMES=['Orange','Green','Blue','Yellow','Pink','Purple','Sky','Peach'];
 const R=105; // tap hit radius px, wider than the disc so a slightly-off finger still counts
 const MAX_ROUNDS=10;
 const stage=document.getElementById('stage'), hub=document.getElementById('hub'), corner=document.getElementById('corner');
-const S={phase:'lobby',mode:'ffa',zones:[],round:0,count:0,low:0,high:0,bust:0,width:0,timer:null,idle:null,ending:false,base:0,step:0};
+const S={phase:'lobby',mode:'ffa',bustEnds:false,zones:[],round:0,count:0,low:0,high:0,bust:0,width:0,timer:null,idle:null,ending:false,base:0,step:0};
 const IDLE_MS=10000; // free-for-all: silence this long starts the end-of-round countdown
 const GOAD_MS=3500, GOAD_P=0.3, GOAD_MAX=1; // free-for-all: after this much quiet, maybe dangle a bonus on the next tap (at most GOAD_MAX per round)
 
@@ -277,7 +282,7 @@ function renderZones(){
     let big='';
     if(S.phase==='lobby')big='☝';
     else if(z.sat)big='zz';
-    else if(S.phase==='tap')big=z.taps?String(z.taps):'0';
+    else if(S.phase==='tap')big=z.bust?'✕':(z.taps?String(z.taps):'0');
     else if(S.phase==='result'||S.phase==='boom')big=z.bust?(S.mode==='ffa'?'0':'✕'):(S.mode==='ffa'?'+'+(z.taps+z.bonus):'+1');
     else big=String(z.score);
     el.innerHTML=`<div class="big">${big}</div>`;
@@ -385,18 +390,21 @@ function cancelEnding(){S.ending=false;clearTimeout(S.timer);document.getElement
 function clearGoad(){S.goad=0;clearTimeout(S.goadT);document.getElementById('goad')?.remove()}
 function tap(z){
   if(S.phase!=='tap'||z.sat||z.bust)return;
-  if(S.bust)return; // round already bust
+  if(S.bust)return; // round already over on a bust
   let bonus=0;
   if(S.mode==='ffa'){cancelEnding();bonus=S.goad;clearGoad();armIdle()}
   S.count++;z.taps++;z.went=true;
   z.bonus+=bonus; // paid out only if this tap survives (a bust wipes the round anyway)
   if(Math.random()<bustChance(S.count)){
-    S.bust=S.count;z.bust=true;
+    z.bust=true;
+    const knockout=S.mode==='ffa'&&!S.bustEnds, alive=S.zones.filter(o=>!o.sat&&!o.bust).length;
+    const endsRound=!knockout||alive===0;   // knockout: only this player is out, the table keeps tapping, unless nobody's left
+    if(endsRound)S.bust=S.count;
     if(S.mode!=='ffa')for(const o of S.zones)if(!o.sat&&!o.went)o.bust=true; // hands: everyone still to go busts too
     if(navigator.vibrate)navigator.vibrate([80,40,160,40,300]);
-    clearTimeout(S.idle);
+    clearTimeout(S.idle);clearGoad();
     S.phase='boom';render();
-    explode(z,()=>{S.phase='result';render()});return;
+    explode(z,()=>{ if(endsRound){S.phase='result';render()} else {S.phase='tap';render();armIdle()} });return;
   }
   if(navigator.vibrate)navigator.vibrate(12);
   render();
@@ -439,6 +447,9 @@ const settingsEl=document.getElementById('settings');
 function renderSettings(){
   document.getElementById('m-ffa').classList.toggle('on',S.mode==='ffa');
   document.getElementById('m-hands').classList.toggle('on',S.mode==='hands');
+  document.getElementById('b-knock').classList.toggle('on',!S.bustEnds);
+  document.getElementById('b-end').classList.toggle('on',S.bustEnds);
+  document.getElementById('bustOpts').hidden=document.getElementById('bustLabel').hidden=S.mode!=='ffa';
   document.getElementById('modeNote').textContent=S.phase==='lobby'||S.phase==='final'?'':'Takes effect from the next round.';
 }
 function openSettings(){if(['range','count','tap'].includes(S.phase))pauseGame();renderSettings();settingsEl.hidden=false}
@@ -448,6 +459,8 @@ document.getElementById('closeSettings').addEventListener('click',closeSettings)
 settingsEl.addEventListener('click',e=>{if(e.target===settingsEl)closeSettings()});
 document.getElementById('m-ffa').addEventListener('click',()=>{S.mode='ffa';renderSettings()});
 document.getElementById('m-hands').addEventListener('click',()=>{S.mode='hands';renderSettings()});
+document.getElementById('b-knock').addEventListener('click',()=>{S.bustEnds=false;renderSettings()});
+document.getElementById('b-end').addEventListener('click',()=>{S.bustEnds=true;renderSettings()});
 document.getElementById('resume').addEventListener('click',resumeGame);
 document.getElementById('endgame').addEventListener('click',endGame);
 
