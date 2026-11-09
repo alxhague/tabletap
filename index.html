@@ -263,6 +263,7 @@ function addZone(x,y){
 }
 function renderZones(){
   for(const el of stage.querySelectorAll('.zone,#keepout'))el.remove();
+  if(S.phase==='final')return; // game over: the table is cleared, only the scores remain
   if(S.phase==='lobby'){const k=keepOut(),ko=document.createElement('div');ko.id='keepout';
     ko.style.cssText=`left:${cx()-k.hw}px;top:${cy()-k.hh}px;width:${k.hw*2}px;height:${k.hh*2}px`;stage.appendChild(ko)}
   for(const z of S.zones){
@@ -329,7 +330,7 @@ function renderHub(){
       <div class="huge" style="color:${winners[0].color}">${top}</div>
       <div class="line">${winners.length>1?winners.map(z=>z.name).join(' & ')+' tie for the win.':winners[0].name+' wins.'}</div>
       <div class="roster">${sorted.map(z=>`<div style="--c:${z.color}"><span class="who"><span class="dot"></span>${z.name}</span><b>${z.score}</b></div>`).join('')}</div>
-      <div class="row"><button id="again">Play again</button><button class="ghost" id="newtable">New table</button></div>`);
+      <button id="newtable">New game</button>`);
   }
   const showScores=S.phase==='result'||S.phase==='final';
   corner.innerHTML=S.round?`Round <b>${Math.min(S.round,MAX_ROUNDS)}</b> / ${MAX_ROUNDS}`+(showScores?'<br>'+S.zones.map(z=>`<span style="color:${z.color}">${z.name} <b>${z.score}</b></span>`).join(' · '):''):'';
@@ -490,6 +491,7 @@ function nextRound(){
   if(active().length<2){for(const z of S.zones)z.sat=false} // never leave fewer than two in
   startRound();
 }
+function resetGame(){clearTimeout(S.timer);clearTimeout(S.idle);clearGoad();S.ending=false;S.paused=null;S.zones=[];S.round=0;S.count=0;S.bust=0;S.phase='lobby';render()}
 function playAgain(){for(const z of S.zones){z.score=0;z.sat=false;z.bust=false}S.round=0;startRound()}
 
 /* ---------- input ---------- */
@@ -511,8 +513,7 @@ hub.addEventListener('click',e=>{
   else if(b.id==='clear'){S.zones=[];render()}
   else if(b.id==='end')endRound();
   else if(b.id==='next')nextRound();
-  else if(b.id==='again')playAgain();
-  else if(b.id==='newtable'){S.zones=[];S.round=0;S.phase='lobby';render()}
+  else if(b.id==='newtable')resetGame();
 });
 window.addEventListener('resize',render);
 render();
