@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f3eee3">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Table Tap</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;700&display=swap">
+<style>
+/* Layout: one full-screen "table top". Player zones are absolutely placed where fingers land
+   and rotated to face their seat; a fixed center hub carries the shared state. Single dark theme
+   (a glowing device on a dim table). */
+:root{
+  /* flat poster palette: paper ground, black ink, magenta for danger, cyan for safe. hard offset shadows, no glows */
+  --felt:#f3eee3; --felt-2:#fbf8f1; --ink:#111111; --ink-dim:#6b6670;
+  --hub:#ffffff; --line:#111111;
+  --bust:#ff2a7a; --safe:#00bfae;
+  --display:'Archivo Black',Impact,'Arial Black',sans-serif;
+  --body:'Archivo','Helvetica Neue',Arial,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{margin:0;background:var(--felt);color:var(--ink);font-family:var(--body);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px))}
+#stage{position:relative;width:100%;height:100%;touch-action:none;overflow:hidden;background:var(--felt)}
+#stage::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(circle,rgba(17,17,17,.14) 1.2px,transparent 1.8px);background-size:24px 24px}
+
+/* zones: solid color discs with a black outline and a hard shadow */
+.zone{position:absolute;width:150px;height:150px;left:0;top:0;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  border:4px solid var(--ink);color:var(--ink);background:var(--c);box-shadow:5px 5px 0 var(--ink);
+  pointer-events:none;transition:transform .12s,opacity .2s}
+.zone .big{font:64px/1 var(--display);font-variant-numeric:tabular-nums;position:relative}
+.zone .big.pop{animation:pop .22s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{0%{transform:scale(1.35)}100%{transform:scale(1)}}
+.zone .ripple{position:absolute;inset:-4px;border-radius:50%;border:4px solid var(--ink);opacity:.7;pointer-events:none;
+  animation:ripple .5s ease-out forwards}
+@keyframes ripple{to{transform:scale(1.6);opacity:0}}
+.zone.out{border-style:dashed;opacity:.45;background:transparent}
+.zone.bust{background:var(--bust);color:#fff;opacity:1}
+.zone.sat{opacity:.35;border-style:dotted}
+.zone.went{box-shadow:2px 2px 0 var(--ink)}
+.zone.fresh{animation:land .35s ease-out}
+@keyframes land{0%{transform:translate(-50%,-50%) scale(.5)}}
+
+#keepout{position:absolute;border:3px solid transparent;border-radius:28px;pointer-events:none;box-sizing:border-box}
+#keepout.nope{animation:nope .4s ease-out;border-color:var(--bust)}
+@keyframes nope{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* hub */
+#hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(300px,78vw);
+  display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;pointer-events:none}
+#hub button,#hub .roster{pointer-events:auto} /* only controls catch taps; text in the middle lets taps fall through to the discs beneath */
+.eyebrow{font:700 11px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim)}
+.huge{font:clamp(72px,22vmin,150px)/1 var(--display);font-variant-numeric:tabular-nums}
+.line{font:500 15px/1.35 var(--body);color:var(--ink-dim);text-wrap:balance;max-width:28ch}
+.range{display:inline-flex;align-items:baseline;gap:8px;padding:8px 16px;border-radius:999px;
+  background:var(--bust);color:#fff;border:4px solid var(--ink);box-shadow:6px 6px 0 var(--ink)}
+.range b{font:clamp(110px,46vmin,320px)/1 var(--display)}
+.range{padding:4px 30px;border-width:3px}
+#count{position:absolute;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vmin;
+  background:#ffd84d;pointer-events:none}
+#count .eyebrow{font-size:clamp(14px,3vmin,22px);color:var(--ink)}
+#count .huge{font-size:clamp(160px,72vmin,560px);color:#fff;-webkit-text-stroke:4px var(--ink);text-shadow:12px 12px 0 var(--ink);
+  animation:tickin .8s cubic-bezier(.2,1.3,.3,1) both}
+@keyframes tickin{0%{transform:scale(1.6);opacity:0}100%{transform:scale(1);opacity:1}}
+#count.soft{background:transparent;justify-content:flex-start;padding-top:calc(env(safe-area-inset-top,0px) + 6px);gap:0}
+#count.soft .huge{font-size:clamp(80px,22vmin,170px);color:#fff;-webkit-text-stroke:3px var(--ink);text-shadow:6px 6px 0 var(--ink)}
+#count.soft .eyebrow{background:var(--ink);color:#fff;padding:8px 14px;border-radius:999px}
+.range span{font:700 11px/1 var(--body);letter-spacing:.14em;text-transform:uppercase}
+button{font:700 15px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:#fff;
+  background:var(--ink);border:3px solid var(--ink);border-radius:999px;padding:14px 26px;cursor:pointer;touch-action:manipulation;
+  box-shadow:4px 4px 0 var(--bust)}
+button:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--bust)}
+button.ghost{background:var(--hub);color:var(--ink);padding:10px 20px;font-size:13px;box-shadow:4px 4px 0 var(--ink)}
+button.ghost:active{box-shadow:2px 2px 0 var(--ink)}
+button:focus-visible{outline:3px solid var(--safe);outline-offset:3px}
+.roster{display:flex;flex-direction:column;gap:6px;width:100%;max-height:34vh;overflow:auto;background:var(--hub);
+  border:3px solid var(--line);border-radius:16px;padding:10px 12px;box-sizing:border-box;box-shadow:6px 6px 0 var(--ink)}
+.roster div{display:flex;justify-content:space-between;font:500 14px/1.3 var(--body);gap:10px}
+.roster .who{display:flex;align-items:center;gap:8px}
+.roster .dot{width:12px;height:12px;border-radius:50%;background:var(--c);border:2px solid var(--ink)}
+.roster .verdict{font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.roster .b{color:var(--bust)} .roster .s{color:var(--safe)}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.modes{display:flex;flex-direction:column;gap:10px;width:100%}
+button.mode{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;text-transform:none;letter-spacing:0;
+  background:var(--hub);color:var(--ink);border:3px solid var(--line);border-radius:18px;padding:16px 18px;width:100%;box-sizing:border-box;
+  box-shadow:6px 6px 0 var(--ink)}
+button.mode b{font:24px/1 var(--display)}
+button.mode span{font:500 13px/1.4 var(--body);color:var(--ink-dim)}
+button.mode:active{box-shadow:3px 3px 0 var(--ink)}
+#m-hands{background:#ffd84d} #m-ffa{background:#5fb3ff}
+#m-hands span,#m-ffa span{color:var(--ink);opacity:.75}
+#corner{position:absolute;left:max(14px,env(safe-area-inset-left,0px));top:max(14px,env(safe-area-inset-top,0px));
+  font:700 11px/1.4 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);pointer-events:none}
+#corner b{color:var(--ink)}
+#help{position:absolute;right:max(14px,env(safe-area-inset-right,0px));top:max(14px,env(safe-area-inset-top,0px));
+  width:40px;height:40px;padding:0;border-radius:50%;background:var(--hub);color:var(--ink);border:3px solid var(--line);
+  font:20px/1 var(--display);text-transform:none;letter-spacing:0;z-index:5;box-shadow:3px 3px 0 var(--ink)}
+#pauseBtn{position:absolute;right:calc(max(14px,env(safe-area-inset-right,0px)) + 50px);top:max(14px,env(safe-area-inset-top,0px));
+  width:40px;height:40px;padding:0;border-radius:50%;background:var(--hub);color:var(--ink);border:3px solid var(--line);
+  font:700 12px/1 var(--body);letter-spacing:-.1em;text-transform:none;z-index:5;box-shadow:3px 3px 0 var(--ink)}
+#settingsBtn{position:absolute;left:max(14px,env(safe-area-inset-left,0px));bottom:max(14px,env(safe-area-inset-bottom,0px));
+  width:40px;height:40px;padding:0;border-radius:50%;background:var(--hub);color:var(--ink);border:3px solid var(--line);
+  font:22px/1 var(--body);text-transform:none;letter-spacing:0;z-index:5;box-shadow:3px 3px 0 var(--ink)}
+#settings{position:absolute;inset:0;z-index:20;background:rgba(243,238,227,.9);display:flex;align-items:center;justify-content:center;
+  padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+#settings .card{width:min(400px,100%);max-height:100%;overflow:auto;background:var(--hub);border:3px solid var(--line);border-radius:20px;padding:22px;box-sizing:border-box;
+  display:flex;flex-direction:column;gap:14px;box-shadow:8px 8px 0 var(--ink)}
+#settings h2{margin:0;font:28px/1 var(--display)}
+#settings .hint{font:500 13px/1.4 var(--body);color:var(--ink-dim);margin:0;min-height:1.4em}
+button.mode.on{outline:4px solid var(--bust);outline-offset:-4px}
+button.mode.on b::after{content:" ✓";color:var(--bust)}
+#pause{position:absolute;inset:0;z-index:20;background:rgba(243,238,227,.9);display:flex;align-items:center;justify-content:center;
+  padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+#pause .card{width:min(320px,100%);background:var(--hub);border:3px solid var(--line);border-radius:20px;padding:22px;box-sizing:border-box;
+  display:flex;flex-direction:column;gap:16px;text-align:center;box-shadow:8px 8px 0 var(--ink)}
+#pause h2{margin:0;font:28px/1 var(--display)}
+#rules{position:absolute;inset:0;z-index:20;background:rgba(243,238,227,.9);display:flex;align-items:center;justify-content:center;
+  padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+#rules .card{max-width:420px;width:100%;max-height:100%;overflow:auto;background:var(--hub);border:3px solid var(--line);border-radius:20px;
+  padding:22px 22px 18px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;box-shadow:8px 8px 0 var(--ink)}
+#rules h2{margin:0;font:28px/1 var(--display)}
+#rules ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px;font:500 15px/1.45 var(--body)}
+#rules li::marker{color:var(--bust);font-weight:700}
+#rules b{color:var(--ink)} #rules ol{color:var(--ink-dim)}
+#rules .hint{font:500 13px/1.4 var(--body);color:var(--ink-dim);border-top:1px solid var(--line);padding-top:12px;margin:0}
+#boom{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;pointer-events:none}
+#boom canvas{position:absolute;inset:0;width:100%;height:100%}
+#boom .word{position:relative;font:clamp(90px,34vmin,260px)/.9 var(--display);color:#fff;text-transform:uppercase;
+  letter-spacing:-.02em;-webkit-text-stroke:3px var(--ink);text-shadow:10px 10px 0 var(--ink);animation:slam .7s cubic-bezier(.2,1.4,.3,1) both}
+#boom .who{position:relative;font:700 clamp(16px,4vmin,28px)/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:#fff;
+  background:var(--ink);padding:10px 16px;border-radius:999px;margin-top:14px;animation:slam .6s .15s cubic-bezier(.2,1.4,.3,1) both}
+#boom .stack{position:relative;display:flex;flex-direction:column;align-items:center}
+@keyframes slam{0%{transform:scale(4);opacity:0}100%{transform:scale(1);opacity:1}}
+#boom.fade{animation:boomout .45s ease-in forwards}
+@keyframes boomout{to{opacity:0}}
+.shake{animation:shake .5s linear}
+@keyframes shake{10%,90%{transform:translate(-2px,1px)}20%,80%{transform:translate(4px,-2px)}30%,50%,70%{transform:translate(-7px,3px)}40%,60%{transform:translate(7px,-3px)}}
+.flash{animation:flash .5s ease-out}
+@keyframes flash{0%{background:color-mix(in srgb,var(--bust) 40%,var(--felt))}100%{background:transparent}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+</head>
+<body>
+<div id="stage">
+  <div id="corner"></div>
+  <div id="hub"></div>
+  <button id="help" aria-label="How to play">?</button>
+  <button id="pauseBtn" aria-label="Pause" hidden>❚❚</button>
+  <button id="settingsBtn" aria-label="Settings">⚙</button>
+  <div id="settings" hidden>
+    <div class="card">
+      <h2>Settings</h2>
+      <div class="eyebrow" style="text-align:left">Game mode</div>
+      <div class="modes">
+        <button class="mode" id="m-ffa"><b>Free For All</b><span>Anyone taps any time. Every tap can bust, and the odds only go up. Stop tapping to end the round.</span></button>
+        <button class="mode" id="m-hands"><b>Throw Hands</b><span>3-2-1, show fingers, count up in order. Cross the bust line and the odds climb.</span></button>
+      </div>
+      <p class="hint" id="modeNote"></p>
+      <button id="closeSettings">Done</button>
+    </div>
+  </div>
+  <div id="pause" hidden>
+    <div class="card">
+      <h2>Paused</h2>
+      <div class="row" style="flex-direction:column;align-items:stretch">
+        <button id="resume">Resume</button>
+        <button class="ghost" id="endgame">End game</button>
+      </div>
+    </div>
+  </div>
+  <div id="rules" hidden>
+    <div class="card">
+      <h2>How to play</h2>
+      <ol>
+        <li><b>Set the table.</b> Lay the phone flat in the middle. Everyone touches the screen once. That spot is yours.</li>
+        <li><b>Check the bust line.</b> Before each round the middle shows a number, like 12+. Every tap below it is safe. From 12 on, each tap might bust, and the odds get worse with every tap past it. It's never a sure thing.</li>
+        <li><b>3, 2, 1, fingers!</b> Everyone throws one hand, 0 to 5 fingers, at once.</li>
+        <li><b>Count up.</b> Lowest hand goes first: tap your spot once per finger. Then the next lowest keeps the count going, and so on.</li>
+        <li><b>Bust.</b> If one of your taps busts, you get nothing this round. Same for everyone who hadn't gone yet.</li>
+        <li><b>Score.</b> Everyone who survives the round gets a point. Nobody ever sits out. Most points after 10 rounds wins.</li>
+      </ol>
+      <p class="hint">Showed zero fingers? You don't tap. If you get marked out by mistake, tap your spot on the results screen to flip it.</p>
+      <h2 style="font-size:20px">Free for all</h2>
+      <ol>
+        <li><b>No order, no hands.</b> Anyone taps their spot whenever they like.</li>
+        <li><b>Watch the odds.</b> The middle shows the chance the next tap busts. It starts tiny and climbs with every tap, at a different pace each round.</li>
+        <li><b>Bank or bust.</b> Each tap you land is a point. Bust and you get zero for the round.</li>
+        <li><b>Quiet ends it.</b> If nobody taps for 10 seconds, a 3-2-1 runs. Tap to keep going, or let it finish and everyone banks.</li>
+      </ol>
+      <button id="closeRules">Got it</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS=['#ff8a3d','#4ee1a0','#5fb3ff','#ffd84d','#ff6fb1','#b78cff','#7be0ff','#ffb27a'];
+const NAMES=['Orange','Green','Blue','Yellow','Pink','Purple','Sky','Peach'];
+const R=105; // tap hit radius px, wider than the disc so a slightly-off finger still counts
+const MAX_ROUNDS=10;
+const stage=document.getElementById('stage'), hub=document.getElementById('hub'), corner=document.getElementById('corner');
+const S={phase:'lobby',mode:'ffa',zones:[],round:0,count:0,low:0,high:0,bust:0,width:0,timer:null,idle:null,ending:false,base:0,step:0};
+const IDLE_MS=10000; // free-for-all: silence this long starts the end-of-round countdown
+
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const cx=()=>stage.clientWidth/2, cy=()=>stage.clientHeight/2;
+const active=()=>S.zones.filter(z=>!z.sat);
+
+/* ---------- bust range ---------- */
+const BASE_P=0.15, STEP_P=0.12, CAP_P=0.9; // bust odds at N, growth per tap past N, hard ceiling
+function dealRange(){
+  const n=active().length;
+  // one hand each (0–5), so the table averages ~2.5 taps per seat; set the line well above that, 3–5.5 per seat
+  S.low=rnd(Math.max(2,Math.round(3*n)),Math.max(3,Math.round(5.5*n)));
+  S.bust=0; // the tap that busted, filled in live
+}
+// free-for-all: no safe zone, just a ramp that starts low; the ramp's start and steepness change every round
+const KNEE=0.05, CREEP=1; // free-for-all: same step below and above 5% (CREEP<1 would slow the early climb)
+function dealRamp(){S.low=1;S.bust=0;S.base=rnd(1,5)/1000;S.step=rnd(1,5)/1000} // 0.1–0.5% start; full step +0.1–0.5 pt per tap
+function ffaChance(c){
+  const k=c-1, creep=S.step*CREEP, toKnee=Math.max(0,Math.ceil((KNEE-S.base)/creep));
+  return k<=toKnee?S.base+creep*k:KNEE+S.step*(k-toKnee);
+}
+// odds that the tap bringing the count to c busts: hands mode is 0 below N then rising; free-for-all creeps then climbs. Never certain.
+const bustChance=c=>Math.min(CAP_P,S.mode==='ffa'?ffaChance(c):(c<S.low?0:BASE_P+STEP_P*(c-S.low)));
+const pct=c=>{const p=bustChance(c)*100;return (p<10?p.toFixed(p<1?2:1).replace(/\.?0+$/,''):Math.round(p))+'%'};
+
+/* ---------- zone helpers ---------- */
+function zoneAt(x,y){let best=null,bd=R*R;for(const z of S.zones){const d=(z.x-x)**2+(z.y-y)**2;if(d<bd){bd=d;best=z}}return best}
+// keep-out box around the middle readout, so no disc ends up under the bust %
+function keepOut(){const w=Math.min(300,stage.clientWidth*.78);return {hw:w/2+40,hh:110}}
+function inKeepOut(x,y){const k=keepOut();return Math.abs(x-cx())<k.hw&&Math.abs(y-cy())<k.hh}
+function addZone(x,y){
+  if(inKeepOut(x,y)){
+    const ko=document.getElementById('keepout');if(ko){ko.classList.remove('nope');void ko.offsetWidth;ko.classList.add('nope')}
+    if(navigator.vibrate)navigator.vibrate([30,30,30]);
+    return;
+  }
+  const used=new Set(S.zones.map(z=>z.ci));let ci=0;while(used.has(ci)&&ci<COLORS.length)ci++;
+  if(ci>=COLORS.length)return;
+  S.zones.push({id:Date.now()+Math.random(),x,y,ci,color:COLORS[ci],name:NAMES[ci],taps:0,went:false,bust:false,sat:false,score:0,fresh:true});
+}
+function renderZones(){
+  for(const el of stage.querySelectorAll('.zone,#keepout'))el.remove();
+  if(S.phase==='lobby'){const k=keepOut(),ko=document.createElement('div');ko.id='keepout';
+    ko.style.cssText=`left:${cx()-k.hw}px;top:${cy()-k.hh}px;width:${k.hw*2}px;height:${k.hh*2}px`;stage.appendChild(ko)}
+  for(const z of S.zones){
+    const el=document.createElement('div');
+    el.className='zone'+(z.fresh?' fresh':'')+(z.sat?' sat':'')+(z.bust?' bust':'')+(z.went&&!z.bust?' went':'');
+    z.fresh=false;
+    const ang=Math.atan2(z.y-cy(),z.x-cx())*180/Math.PI+90; // text "up" points away from the hub, toward the seat
+    el.style.setProperty('--c',z.color);
+    el.style.left=z.x+'px';el.style.top=z.y+'px';
+    el.style.transform=`translate(-50%,-50%) rotate(${ang}deg)`;
+    let big='';
+    if(S.phase==='lobby')big='☝';
+    else if(z.sat)big='zz';
+    else if(S.phase==='tap')big=z.taps?String(z.taps):'0';
+    else if(S.phase==='result'||S.phase==='boom')big=z.bust?(S.mode==='ffa'?'0':'✕'):(S.mode==='ffa'?'+'+z.taps:'+1');
+    else big=String(z.score);
+    el.innerHTML=`<div class="big">${big}</div>`;
+    el.dataset.id=z.id;
+    stage.appendChild(el);
+  }
+}
+
+/* ---------- hub ---------- */
+function setHub(html){hub.innerHTML=html}
+function renderHub(){
+  const n=S.zones.length, ffa=S.mode==='ffa';
+  if(S.phase==='lobby'){
+    setHub(`<div class="huge" style="font-size:clamp(52px,15vmin,96px);line-height:.9;color:var(--bust);-webkit-text-stroke:2px var(--ink);text-shadow:6px 6px 0 var(--ink)">Table<br>Tap</div>
+      <div class="eyebrow">${ffa?'Free for all':'Throw hands'}</div>
+      <div class="line">${n<2?'Everyone put one finger on the screen. Lift when you see your spot.':n+' seats set. Tap a spot to remove it.'}</div>
+      <div class="row">${n>=2?'<button id="go">Start</button>':''}${n?'<button class="ghost" id="clear">Clear</button>':''}</div>`);
+  }else if(S.phase==='range'){
+    setHub(`<div class="eyebrow">Round ${S.round} of ${MAX_ROUNDS} · bust zone</div>
+      <div class="range"><b>${S.low}<span style="font:inherit;font-size:.5em;letter-spacing:0;text-transform:none;vertical-align:.4em">+</span></b></div>
+      <div class="line">Safe below ${S.low}. From ${S.low} on, every tap can bust, and the odds climb with each one.</div>`);
+  }else if(S.phase==='count'){
+    setHub('');
+    const ov=document.createElement('div');ov.id='count';
+    ov.innerHTML=`<div class="eyebrow">Bust ${S.low}+ · get a hand ready</div><div class="huge" id="cd">3</div>`;
+    stage.appendChild(ov);
+  }else if(S.phase==='tap'&&ffa){
+    const nxt=S.count+1;
+    setHub(`<div class="huge" id="total" style="color:var(--bust)">${pct(nxt)}</div>`);
+  }else if(S.phase==='tap'){
+    const nxt=S.count+1, hot=nxt>=S.low;
+    setHub(`<div class="eyebrow">Bust ${S.low}+ · lowest hand first</div>
+      <div class="huge" id="total" style="${hot?'color:var(--bust)':''}">${S.count}</div>
+      <div class="line">${S.count===0?'Show fingers. Lowest player taps their number in their spot.':hot?'Next tap busts <b style="color:var(--bust)">'+pct(nxt)+'</b> of the time.':'Safe for '+(S.low-S.count-1)+' more tap'+(S.low-S.count-1===1?'':'s')+'.'}</div>
+      <button class="ghost" id="end">Everyone's gone</button>`);
+  }else if(S.phase==='boom'){
+    setHub('');
+  }else if(S.phase==='result'){
+    // round recap: what each player banked this round, busts called out; ordered best to worst
+    const rows=[...S.zones].map(z=>({z,pts:z.bust?0:(ffa?z.taps:1)})).sort((a,b)=>(b.pts-a.pts)||(a.z.bust-b.z.bust));
+    setHub(`<div class="eyebrow">Round ${S.round} of ${MAX_ROUNDS}</div>
+      <div class="roster">${rows.map(({z,pts})=>`<div style="--c:${z.color}"><span class="who"><span class="dot"></span>${z.name}</span>
+        <span class="verdict ${z.bust?'b':'s'}">${z.bust?'Bust':'+'+pts}</span></div>`).join('')}</div>
+      ${!ffa?'<div class="line">Tap a spot to flip anyone who showed zero fingers.</div>':''}
+      <button id="next">${S.round>=MAX_ROUNDS?'Final scores':'Next round'}</button>`);
+  }else if(S.phase==='final'){
+    const sorted=[...S.zones].sort((a,b)=>b.score-a.score), top=sorted[0].score;
+    const winners=sorted.filter(z=>z.score===top);
+    setHub(`<div class="eyebrow">Game over · ${MAX_ROUNDS} rounds</div>
+      <div class="huge" style="color:${winners[0].color}">${top}</div>
+      <div class="line">${winners.length>1?winners.map(z=>z.name).join(' & ')+' tie for the win.':winners[0].name+' wins.'}</div>
+      <div class="roster">${sorted.map(z=>`<div style="--c:${z.color}"><span class="who"><span class="dot"></span>${z.name}</span><b>${z.score}</b></div>`).join('')}</div>
+      <div class="row"><button id="again">Play again</button><button class="ghost" id="newtable">New table</button></div>`);
+  }
+  const showScores=S.phase==='result'||S.phase==='final';
+  corner.innerHTML=S.round?`Round <b>${Math.min(S.round,MAX_ROUNDS)}</b> / ${MAX_ROUNDS}`+(showScores?'<br>'+S.zones.map(z=>`<span style="color:${z.color}">${z.name} <b>${z.score}</b></span>`).join(' · '):''):'';
+}
+function render(){document.getElementById('count')?.remove();renderZones();renderHub();
+  pauseBtn.hidden=!['range','count','tap','result'].includes(S.phase)}
+
+/* ---------- flow ---------- */
+function startRound(){
+  S.round++;S.count=0;
+  for(const z of S.zones){z.taps=0;z.went=false;z.bust=false}
+  clearTimeout(S.timer);clearTimeout(S.idle);S.ending=false;
+  if(S.mode==='ffa'){dealRamp();S.phase='tap';render();armIdle();return}
+  dealRange();preRoll();
+}
+/* hands mode: show the bust line, then the 3-2-1, then open tapping */
+function preRoll(){
+  S.phase='range';render();
+  S.timer=setTimeout(()=>{S.phase='count';render();let c=3;const tick=()=>{
+    const el=document.getElementById('cd');if(!el)return;
+    if(c===0){S.phase='tap';render();return}
+    el.textContent=c;el.style.animation='none';void el.offsetWidth;el.style.animation='';
+    if(navigator.vibrate)navigator.vibrate(30);
+    c--;S.timer=setTimeout(tick,850)};tick()},5200);
+}
+/* free-for-all idle clock: quiet for IDLE_MS → 3-2-1 → round over. Any tap cancels it. */
+function armIdle(){
+  clearTimeout(S.idle);
+  S.idle=setTimeout(()=>{
+    S.ending=true;
+    const ov=document.createElement('div');ov.id='count';ov.className='soft';
+    ov.innerHTML=`<div class="huge" id="cd">3</div><div class="eyebrow">Round ending · tap to keep going</div>`;
+    stage.appendChild(ov);
+    let c=3;const tick=()=>{
+      if(!S.ending)return;
+      const el=document.getElementById('cd');if(!el)return;
+      if(c===0){S.ending=false;endRound();return}
+      el.textContent=c;el.style.animation='none';void el.offsetWidth;el.style.animation='';
+      c--;S.timer=setTimeout(tick,850)};tick();
+  },IDLE_MS);
+}
+function cancelEnding(){S.ending=false;clearTimeout(S.timer);document.getElementById('count')?.remove()}
+function tap(z){
+  if(S.phase!=='tap'||z.sat||z.bust)return;
+  if(S.bust)return; // round already bust
+  if(S.mode==='ffa'){cancelEnding();armIdle()}
+  S.count++;z.taps++;z.went=true;
+  if(Math.random()<bustChance(S.count)){
+    S.bust=S.count;z.bust=true;
+    if(S.mode!=='ffa')for(const o of S.zones)if(!o.sat&&!o.went)o.bust=true; // hands: everyone still to go busts too
+    if(navigator.vibrate)navigator.vibrate([80,40,160,40,300]);
+    clearTimeout(S.idle);
+    S.phase='boom';render();
+    explode(z,()=>{S.phase='result';render()});return;
+  }
+  if(navigator.vibrate)navigator.vibrate(12);
+  render();
+  const el=stage.querySelector(`.zone[data-id="${z.id}"]`);
+  if(el){
+    el.querySelector('.big').classList.add('pop');          // number pops on its own layer, so the zone's rotation stays put
+    const r=document.createElement('div');r.className='ripple';el.appendChild(r);
+    r.addEventListener('animationend',()=>r.remove());
+  }
+}
+function endRound(){clearTimeout(S.idle);clearTimeout(S.timer);S.ending=false;S.phase='result';render()}
+
+/* ---------- pause ---------- */
+const pauseEl=document.getElementById('pause'), pauseBtn=document.getElementById('pauseBtn');
+function pauseGame(){
+  if(!['range','count','tap','result'].includes(S.phase))return;
+  clearTimeout(S.timer);clearTimeout(S.idle);cancelEnding();
+  document.getElementById('count')?.remove();
+  S.paused=S.phase;pauseEl.hidden=false;
+}
+function resumeGame(){
+  const ph=S.paused;S.paused=null;pauseEl.hidden=true;
+  if(ph==='range'||ph==='count')preRoll();          // replay the line + 3-2-1 so nobody's caught off guard
+  else if(ph==='tap'&&S.mode==='ffa')armIdle();
+}
+function endGame(){
+  const ph=S.paused||S.phase; // the phase we were in when pause was hit
+  S.paused=null;pauseEl.hidden=true;
+  // bank the round in progress (or the finished-but-unbanked one) so nobody loses taps to an early finish
+  if(['tap','result'].includes(ph))for(const z of S.zones)if(!z.bust)z.score+=S.mode==='ffa'?z.taps:(ph==='result'?1:0);
+  for(const z of S.zones){z.sat=false;z.taps=0;z.bust=false}
+  S.phase='final';render();
+}
+pauseBtn.addEventListener('click',pauseGame);
+
+/* ---------- settings ---------- */
+const settingsEl=document.getElementById('settings');
+function renderSettings(){
+  document.getElementById('m-ffa').classList.toggle('on',S.mode==='ffa');
+  document.getElementById('m-hands').classList.toggle('on',S.mode==='hands');
+  document.getElementById('modeNote').textContent=S.phase==='lobby'||S.phase==='final'?'':'Takes effect from the next round.';
+}
+function openSettings(){if(['range','count','tap'].includes(S.phase))pauseGame();renderSettings();settingsEl.hidden=false}
+function closeSettings(){settingsEl.hidden=true;if(S.phase==='lobby')render()}
+document.getElementById('settingsBtn').addEventListener('click',openSettings);
+document.getElementById('closeSettings').addEventListener('click',closeSettings);
+settingsEl.addEventListener('click',e=>{if(e.target===settingsEl)closeSettings()});
+document.getElementById('m-ffa').addEventListener('click',()=>{S.mode='ffa';renderSettings()});
+document.getElementById('m-hands').addEventListener('click',()=>{S.mode='hands';renderSettings()});
+document.getElementById('resume').addEventListener('click',resumeGame);
+document.getElementById('endgame').addEventListener('click',endGame);
+
+/* ---------- bust explosion ---------- */
+function explode(z,done){
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const boom=document.createElement('div');boom.id='boom';
+  const cv=document.createElement('canvas');boom.appendChild(cv);
+  const stack=document.createElement('div');stack.className='stack';
+  stack.innerHTML=`<div class="word">Bust</div><div class="who">${z.name} on ${S.count}</div>`;
+  boom.appendChild(stack);stage.appendChild(boom);
+  stage.classList.remove('shake');void stage.offsetWidth;if(!reduce)stage.classList.add('shake');
+  const W=cv.width=stage.clientWidth*devicePixelRatio,H=cv.height=stage.clientHeight*devicePixelRatio,dpr=devicePixelRatio;
+  const ctx=cv.getContext('2d');
+  const ox=z.x*dpr,oy=z.y*dpr, maxR=Math.hypot(W,H);
+  const parts=[];const cols=[z.color,'#111111','#ffd84d','#ffffff','#00bfae'];
+  for(let i=0;i<(reduce?0:260);i++){const a=Math.random()*Math.PI*2,sp=(0.35+Math.random()*1.3)*maxR/60;
+    parts.push({x:ox,y:oy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:(2+Math.random()*6)*dpr,c:cols[i%cols.length],spin:Math.random()*6,life:1})}
+  const t0=performance.now(),DUR=1700;
+  function frame(t){
+    const k=Math.min(1,(t-t0)/DUR);
+    ctx.clearRect(0,0,W,H);
+    // shockwave + red wash that swallows the screen
+    const ring=k*maxR*1.1;
+    ctx.fillStyle=`rgba(255,42,122,${0.97-0.3*k})`;ctx.beginPath();ctx.arc(ox,oy,ring,0,7);ctx.fill();
+    ctx.lineWidth=18*dpr*(1-k);ctx.strokeStyle=`rgba(17,17,17,${1-k})`;ctx.beginPath();ctx.arc(ox,oy,ring*0.9,0,7);ctx.stroke();
+    for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vx*=0.985;p.vy=p.vy*0.985+0.25*dpr;p.spin+=0.2;p.life=1-k;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.spin);ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.c;
+      ctx.fillRect(-p.r,-p.r/2,p.r*2,p.r);ctx.restore()}
+    if(k<1)requestAnimationFrame(frame);
+    else{boom.classList.add('fade');setTimeout(()=>{boom.remove();done()},450)}
+  }
+  requestAnimationFrame(frame);
+}
+function nextRound(){
+  for(const z of S.zones){
+    if(!z.sat&&!z.bust)z.score+=S.mode==='ffa'?z.taps:1; // hands: survive = 1 point; free for all: bank your taps
+    z.sat=false; // a bust is just a zero round, nobody sits out
+  }
+  if(S.round>=MAX_ROUNDS){for(const z of S.zones)z.sat=false;S.phase='final';render();return}
+  if(active().length<2){for(const z of S.zones)z.sat=false} // never leave fewer than two in
+  startRound();
+}
+function playAgain(){for(const z of S.zones){z.score=0;z.sat=false;z.bust=false}S.round=0;startRound()}
+
+/* ---------- input ---------- */
+const rules=document.getElementById('rules');
+document.getElementById('help').addEventListener('click',()=>{rules.hidden=false});
+document.getElementById('closeRules').addEventListener('click',()=>{rules.hidden=true});
+rules.addEventListener('click',e=>{if(e.target===rules)rules.hidden=true});
+stage.addEventListener('pointerdown',e=>{
+  if(e.target.closest('button')||e.target.closest('.roster')||e.target.closest('#rules')||e.target.closest('#pause')||e.target.closest('#settings'))return;
+  const r=stage.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+  const z=zoneAt(x,y);
+  if(S.phase==='lobby'){ if(z){S.zones=S.zones.filter(o=>o!==z)} else addZone(x,y); render(); }
+  else if(S.phase==='tap'&&z)tap(z);
+  else if(S.phase==='result'&&z&&S.mode!=='ffa'){z.bust=!z.bust;render()} // hands only: flip a zero-finger player. in free for all a late tap must not cost anyone their round
+});
+hub.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.id==='go')startRound();
+  else if(b.id==='clear'){S.zones=[];render()}
+  else if(b.id==='end')endRound();
+  else if(b.id==='next')nextRound();
+  else if(b.id==='again')playAgain();
+  else if(b.id==='newtable'){S.zones=[];S.round=0;S.phase='lobby';render()}
+});
+window.addEventListener('resize',render);
+render();
+</script>
+</body></html>
