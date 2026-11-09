@@ -221,7 +221,7 @@ const MAX_ROUNDS=10;
 const stage=document.getElementById('stage'), hub=document.getElementById('hub'), corner=document.getElementById('corner');
 const S={phase:'lobby',mode:'ffa',zones:[],round:0,count:0,low:0,high:0,bust:0,width:0,timer:null,idle:null,ending:false,base:0,step:0};
 const IDLE_MS=10000; // free-for-all: silence this long starts the end-of-round countdown
-const GOAD_MS=3500, GOAD_P=0.5, GOAD_MAX=2; // free-for-all: after this much quiet, maybe dangle a bonus on the next tap (at most GOAD_MAX per round)
+const GOAD_MS=3500, GOAD_P=0.3, GOAD_MAX=1; // free-for-all: after this much quiet, maybe dangle a bonus on the next tap (at most GOAD_MAX per round)
 
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const cx=()=>stage.clientWidth/2, cy=()=>stage.clientHeight/2;
