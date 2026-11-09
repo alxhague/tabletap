@@ -53,6 +53,16 @@ body{margin:0;background:var(--felt);color:var(--ink);font-family:var(--body);ov
 #keepout.nope{animation:nope .4s ease-out;border-color:var(--bust)}
 @keyframes nope{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 
+#goad{position:absolute;left:50%;top:calc(max(14px,env(safe-area-inset-top,0px)) + 6px);transform:translateX(-50%);z-index:6;pointer-events:none;
+  display:flex;align-items:center;gap:12px;background:#ffd84d;border:4px solid var(--ink);border-radius:999px;padding:8px 22px 8px 16px;
+  box-shadow:6px 6px 0 var(--ink);animation:goadin .5s cubic-bezier(.2,1.5,.4,1) both,wiggle 1.2s .5s ease-in-out infinite}
+#goad .big{font:44px/1 var(--display);color:var(--ink)}
+#goad .eyebrow{color:var(--ink)}
+@keyframes goadin{0%{transform:translateX(-50%) translateY(-120%) scale(.6);opacity:0}100%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}
+@keyframes wiggle{0%,100%{transform:translateX(-50%) rotate(-2deg)}50%{transform:translateX(-50%) rotate(2deg)}}
+.zone .float{position:absolute;font:40px/1 var(--display);color:var(--ink);pointer-events:none;animation:floatup .9s ease-out forwards}
+@keyframes floatup{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-90px);opacity:0}}
+
 /* hub */
 #hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(300px,78vw);
   display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;pointer-events:none}
@@ -195,6 +205,7 @@ button.mode.on b::after{content:" ✓";color:var(--bust)}
         <li><b>No order, no hands.</b> Anyone taps their spot whenever they like.</li>
         <li><b>Watch the odds.</b> The middle shows the chance the next tap busts. It starts tiny and climbs with every tap, at a different pace each round.</li>
         <li><b>Bank or bust.</b> Each tap you land is a point. Bust and you get zero for the round.</li>
+        <li><b>Bonus taps.</b> Now and then a yellow tag pops up: the next tap is worth extra. Same bust odds as any other tap.</li>
         <li><b>Quiet ends it.</b> If nobody taps for 10 seconds, a 3-2-1 runs. Tap to keep going, or let it finish and everyone banks.</li>
       </ol>
       <button id="closeRules">Got it</button>
@@ -210,6 +221,7 @@ const MAX_ROUNDS=10;
 const stage=document.getElementById('stage'), hub=document.getElementById('hub'), corner=document.getElementById('corner');
 const S={phase:'lobby',mode:'ffa',zones:[],round:0,count:0,low:0,high:0,bust:0,width:0,timer:null,idle:null,ending:false,base:0,step:0};
 const IDLE_MS=10000; // free-for-all: silence this long starts the end-of-round countdown
+const GOAD_MS=3500, GOAD_P=0.5, GOAD_MAX=2; // free-for-all: after this much quiet, maybe dangle a bonus on the next tap (at most GOAD_MAX per round)
 
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const cx=()=>stage.clientWidth/2, cy=()=>stage.clientHeight/2;
@@ -247,7 +259,7 @@ function addZone(x,y){
   }
   const used=new Set(S.zones.map(z=>z.ci));let ci=0;while(used.has(ci)&&ci<COLORS.length)ci++;
   if(ci>=COLORS.length)return;
-  S.zones.push({id:Date.now()+Math.random(),x,y,ci,color:COLORS[ci],name:NAMES[ci],taps:0,went:false,bust:false,sat:false,score:0,fresh:true});
+  S.zones.push({id:Date.now()+Math.random(),x,y,ci,color:COLORS[ci],name:NAMES[ci],taps:0,bonus:0,went:false,bust:false,sat:false,score:0,fresh:true});
 }
 function renderZones(){
   for(const el of stage.querySelectorAll('.zone,#keepout'))el.remove();
@@ -265,7 +277,7 @@ function renderZones(){
     if(S.phase==='lobby')big='☝';
     else if(z.sat)big='zz';
     else if(S.phase==='tap')big=z.taps?String(z.taps):'0';
-    else if(S.phase==='result'||S.phase==='boom')big=z.bust?(S.mode==='ffa'?'0':'✕'):(S.mode==='ffa'?'+'+z.taps:'+1');
+    else if(S.phase==='result'||S.phase==='boom')big=z.bust?(S.mode==='ffa'?'0':'✕'):(S.mode==='ffa'?'+'+(z.taps+z.bonus):'+1');
     else big=String(z.score);
     el.innerHTML=`<div class="big">${big}</div>`;
     el.dataset.id=z.id;
@@ -304,7 +316,7 @@ function renderHub(){
     setHub('');
   }else if(S.phase==='result'){
     // round recap: what each player banked this round, busts called out; ordered best to worst
-    const rows=[...S.zones].map(z=>({z,pts:z.bust?0:(ffa?z.taps:1)})).sort((a,b)=>(b.pts-a.pts)||(a.z.bust-b.z.bust));
+    const rows=[...S.zones].map(z=>({z,pts:z.bust?0:(ffa?z.taps+z.bonus:1)})).sort((a,b)=>(b.pts-a.pts)||(a.z.bust-b.z.bust));
     setHub(`<div class="eyebrow">Round ${S.round} of ${MAX_ROUNDS}</div>
       <div class="roster">${rows.map(({z,pts})=>`<div style="--c:${z.color}"><span class="who"><span class="dot"></span>${z.name}</span>
         <span class="verdict ${z.bust?'b':'s'}">${z.bust?'Bust':'+'+pts}</span></div>`).join('')}</div>
@@ -328,8 +340,8 @@ function render(){document.getElementById('count')?.remove();renderZones();rende
 /* ---------- flow ---------- */
 function startRound(){
   S.round++;S.count=0;
-  for(const z of S.zones){z.taps=0;z.went=false;z.bust=false}
-  clearTimeout(S.timer);clearTimeout(S.idle);S.ending=false;
+  for(const z of S.zones){z.taps=0;z.bonus=0;z.went=false;z.bust=false}
+  clearTimeout(S.timer);clearTimeout(S.idle);S.ending=false;clearGoad();S.goads=0;
   if(S.mode==='ffa'){dealRamp();S.phase='tap';render();armIdle();return}
   dealRange();preRoll();
 }
@@ -345,8 +357,17 @@ function preRoll(){
 }
 /* free-for-all idle clock: quiet for IDLE_MS → 3-2-1 → round over. Any tap cancels it. */
 function armIdle(){
-  clearTimeout(S.idle);
+  clearTimeout(S.idle);clearTimeout(S.goadT);
+  if(S.goads<GOAD_MAX&&!S.goad)S.goadT=setTimeout(()=>{
+    if(S.phase!=='tap'||S.ending||Math.random()>GOAD_P)return;
+    S.goad=rnd(2,5);S.goads++;
+    const g=document.createElement('div');g.id='goad';
+    g.innerHTML=`<div class="big">+${S.goad}</div><div class="eyebrow">next tap</div>`;
+    stage.appendChild(g);
+    if(navigator.vibrate)navigator.vibrate([20,40,20]);
+  },GOAD_MS);
   S.idle=setTimeout(()=>{
+    clearGoad();
     S.ending=true;
     const ov=document.createElement('div');ov.id='count';ov.className='soft';
     ov.innerHTML=`<div class="huge" id="cd">3</div><div class="eyebrow">Round ending · tap to keep going</div>`;
@@ -360,11 +381,14 @@ function armIdle(){
   },IDLE_MS);
 }
 function cancelEnding(){S.ending=false;clearTimeout(S.timer);document.getElementById('count')?.remove()}
+function clearGoad(){S.goad=0;clearTimeout(S.goadT);document.getElementById('goad')?.remove()}
 function tap(z){
   if(S.phase!=='tap'||z.sat||z.bust)return;
   if(S.bust)return; // round already bust
-  if(S.mode==='ffa'){cancelEnding();armIdle()}
+  let bonus=0;
+  if(S.mode==='ffa'){cancelEnding();bonus=S.goad;clearGoad();armIdle()}
   S.count++;z.taps++;z.went=true;
+  z.bonus+=bonus; // paid out only if this tap survives (a bust wipes the round anyway)
   if(Math.random()<bustChance(S.count)){
     S.bust=S.count;z.bust=true;
     if(S.mode!=='ffa')for(const o of S.zones)if(!o.sat&&!o.went)o.bust=true; // hands: everyone still to go busts too
@@ -380,6 +404,8 @@ function tap(z){
     el.querySelector('.big').classList.add('pop');          // number pops on its own layer, so the zone's rotation stays put
     const r=document.createElement('div');r.className='ripple';el.appendChild(r);
     r.addEventListener('animationend',()=>r.remove());
+    if(bonus){const f=document.createElement('div');f.className='float';f.textContent='+'+bonus;el.appendChild(f);
+      f.addEventListener('animationend',()=>f.remove())}
   }
 }
 function endRound(){clearTimeout(S.idle);clearTimeout(S.timer);S.ending=false;S.phase='result';render()}
@@ -401,7 +427,7 @@ function endGame(){
   const ph=S.paused||S.phase; // the phase we were in when pause was hit
   S.paused=null;pauseEl.hidden=true;
   // bank the round in progress (or the finished-but-unbanked one) so nobody loses taps to an early finish
-  if(['tap','result'].includes(ph))for(const z of S.zones)if(!z.bust)z.score+=S.mode==='ffa'?z.taps:(ph==='result'?1:0);
+  if(['tap','result'].includes(ph))for(const z of S.zones)if(!z.bust)z.score+=S.mode==='ffa'?z.taps+z.bonus:(ph==='result'?1:0);
   for(const z of S.zones){z.sat=false;z.taps=0;z.bust=false}
   S.phase='final';render();
 }
@@ -430,7 +456,7 @@ function explode(z,done){
   const boom=document.createElement('div');boom.id='boom';
   const cv=document.createElement('canvas');boom.appendChild(cv);
   const stack=document.createElement('div');stack.className='stack';
-  stack.innerHTML=`<div class="word">Bust</div><div class="who">${z.name} on ${S.count}</div>`;
+  stack.innerHTML=`<div class="word">Bust</div>`;
   boom.appendChild(stack);stage.appendChild(boom);
   stage.classList.remove('shake');void stage.offsetWidth;if(!reduce)stage.classList.add('shake');
   const W=cv.width=stage.clientWidth*devicePixelRatio,H=cv.height=stage.clientHeight*devicePixelRatio,dpr=devicePixelRatio;
@@ -441,7 +467,7 @@ function explode(z,done){
     parts.push({x:ox,y:oy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:(2+Math.random()*6)*dpr,c:cols[i%cols.length],spin:Math.random()*6,life:1})}
   const t0=performance.now(),DUR=1700;
   function frame(t){
-    const k=Math.min(1,(t-t0)/DUR);
+    const k=Math.max(0,Math.min(1,(t-t0)/DUR));
     ctx.clearRect(0,0,W,H);
     // shockwave + red wash that swallows the screen
     const ring=k*maxR*1.1;
@@ -457,7 +483,7 @@ function explode(z,done){
 }
 function nextRound(){
   for(const z of S.zones){
-    if(!z.sat&&!z.bust)z.score+=S.mode==='ffa'?z.taps:1; // hands: survive = 1 point; free for all: bank your taps
+    if(!z.sat&&!z.bust)z.score+=S.mode==='ffa'?z.taps+z.bonus:1; // hands: survive = 1 point; free for all: bank your taps
     z.sat=false; // a bust is just a zero round, nobody sits out
   }
   if(S.round>=MAX_ROUNDS){for(const z of S.zones)z.sat=false;S.phase='final';render();return}
