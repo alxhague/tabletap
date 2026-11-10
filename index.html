@@ -124,10 +124,10 @@ button.mode:active{box-shadow:3px 3px 0 var(--ink)}
 #help{position:absolute;right:max(14px,env(safe-area-inset-right,0px));top:max(14px,env(safe-area-inset-top,0px));
   width:40px;height:40px;padding:0;border-radius:50%;background:var(--hub);color:var(--ink);border:3px solid var(--line);
   font:20px/1 var(--display);text-transform:none;letter-spacing:0;z-index:5;box-shadow:3px 3px 0 var(--ink)}
-#pauseBtn{position:absolute;right:calc(max(14px,env(safe-area-inset-right,0px)) + 50px);top:max(14px,env(safe-area-inset-top,0px));
+#pauseBtn{position:absolute;right:calc(max(14px,env(safe-area-inset-right,0px)) + 100px);top:max(14px,env(safe-area-inset-top,0px));
   width:40px;height:40px;padding:0;border-radius:50%;background:var(--hub);color:var(--ink);border:3px solid var(--line);
   font:700 12px/1 var(--body);letter-spacing:-.1em;text-transform:none;z-index:5;box-shadow:3px 3px 0 var(--ink)}
-#settingsBtn{position:absolute;left:max(14px,env(safe-area-inset-left,0px));bottom:max(14px,env(safe-area-inset-bottom,0px));
+#settingsBtn{position:absolute;right:calc(max(14px,env(safe-area-inset-right,0px)) + 50px);top:max(14px,env(safe-area-inset-top,0px));
   width:40px;height:40px;padding:0;border-radius:50%;background:var(--hub);color:var(--ink);border:3px solid var(--line);
   font:22px/1 var(--body);text-transform:none;letter-spacing:0;z-index:5;box-shadow:3px 3px 0 var(--ink)}
 #settings{position:absolute;inset:0;z-index:20;background:rgba(243,238,227,.9);display:flex;align-items:center;justify-content:center;
@@ -315,8 +315,7 @@ function renderHub(){
   const n=S.zones.length, ffa=S.mode==='ffa';
   if(S.phase==='lobby'){
     setHub(`<div class="huge" style="font-size:clamp(52px,15vmin,96px);line-height:.9;color:var(--bust);-webkit-text-stroke:2px var(--ink);text-shadow:6px 6px 0 var(--ink)">Table<br>Tap</div>
-      <div class="eyebrow">${ffa?'Free for all':'Throw hands'}</div>
-      <div class="line">${n<2?'Everyone put one finger on the screen. Lift when you see your spot.':n+' seats set. Tap a spot to remove it.'}</div>
+      ${ffa?'':'<div class="eyebrow">Throw hands</div>'}
       <div class="row">${n>=2?'<button id="go">Start</button>':''}${n?'<button class="ghost" id="clear">Clear</button>':''}</div>`);
   }else if(S.phase==='range'){
     setHub(`<div class="eyebrow">Round ${S.round} of ${MAX_ROUNDS} · bust zone</div>
