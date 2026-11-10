@@ -6,237 +6,292 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#f3eee3">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
-<title>Taps</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;700&display=swap">
+<meta name="apple-mobile-web-app-title" content="Tap App">
+<meta name="theme-color" content="#ec0a8c">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Tap App</title>
+<link rel="preload" href="fonts/jost.woff2" as="font" type="font/woff2" crossorigin>
+<style>@font-face{font-family:'Jost';font-style:normal;font-weight:100 900;font-display:block;src:url(fonts/jost.woff2) format('woff2')}</style>
 <style>
-/* Layout: one full-screen "table top". Player zones are absolutely placed where fingers land
-   and rotated to face their seat; a fixed center hub carries the shared state. Single dark theme
-   (a glowing device on a dim table). */
+/* Layout: one flat field of magenta is the table. A single geometric sans, set in white, carries the state of the
+   game in the middle; players are flat discs of colour where their fingers landed. Every other screen arrives as a
+   disc of colour growing to fill the table: cyan counts you in, yellow dangles a bonus, black is the bust, white keeps score. */
 :root{
-  /* flat poster palette: paper ground, black ink, magenta for danger, cyan for safe. hard offset shadows, no glows */
-  --felt:#f3eee3; --felt-2:#fbf8f1; --ink:#111111; --ink-dim:#6b6670;
-  --hub:#ffffff; --line:#111111;
-  --bust:#ff2a7a; --safe:#00bfae;
-  --display:'Archivo Black',Impact,'Arial Black',sans-serif;
-  --body:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --m:#ec0a8c;                    /* magenta: the table */
+  --c:#16bdf2;                    /* cyan: the count-in */
+  --y:#ffe033;                    /* yellow: the bonus */
+  --k:#141012;                    /* key: ink, and the bust */
+  --w:#ffffff;                    /* paper: type on colour, the score sheet */
+  --w-soft:rgba(255,255,255,.88); /* running text on colour */
+  --k-soft:rgba(20,16,18,.62);    /* running text on paper */
+  --k-hair:rgba(20,16,18,.14);    /* hairlines on paper */
+  --display:'Jost','Futura','Century Gothic','Avenir Next',system-ui,sans-serif; /* numerals, wordmark, headlines */
+  --text:'Jost','Futura','Century Gothic','Avenir Next',system-ui,sans-serif;    /* labels, buttons, rules */
+  --ease:cubic-bezier(.3,0,.15,1);
+  --spring:cubic-bezier(.2,1.5,.4,1);
   color-scheme:light;
 }
+html{background:var(--m)}
 html,body{height:100%}
-body{margin:0;background:var(--felt);color:var(--ink);font-family:var(--body);overflow:hidden;
-  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+body{margin:0;background:var(--m);color:var(--w);font-family:var(--text);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;
+  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;
   padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px))}
-#stage{position:relative;width:100%;height:100%;touch-action:none;overflow:hidden;background:var(--felt)}
-#stage::before{content:"";position:absolute;inset:0;pointer-events:none;
-  background-image:radial-gradient(circle,rgba(17,17,17,.14) 1.2px,transparent 1.8px);background-size:24px 24px}
+#stage{position:relative;width:100%;height:100%;touch-action:none;overflow:hidden;background:var(--m)}
 
-/* zones: solid color discs with a black outline and a hard shadow */
-.zone{position:absolute;width:150px;height:150px;left:0;top:0;border-radius:50%;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-  border:4px solid var(--ink);color:var(--ink);background:var(--c);box-shadow:5px 5px 0 var(--ink);
-  pointer-events:none;transition:transform .12s,opacity .2s}
-.zone .big{font:64px/1 var(--display);font-variant-numeric:tabular-nums;position:relative}
-.zone .big.pop{animation:pop .22s cubic-bezier(.2,1.6,.4,1)}
-@keyframes pop{0%{transform:scale(1.35)}100%{transform:scale(1)}}
-.zone .ripple{position:absolute;inset:-4px;border-radius:50%;border:4px solid var(--ink);opacity:.7;pointer-events:none;
-  animation:ripple .5s ease-out forwards}
-@keyframes ripple{to{transform:scale(1.6);opacity:0}}
-.zone.out{border-style:dashed;opacity:.45;background:transparent}
-.zone.bust{background:var(--bust);color:#fff;opacity:1}
-.zone.sat{opacity:.35;border-style:dotted}
-.zone.went{box-shadow:2px 2px 0 var(--ink)}
-.zone.fresh{animation:land .35s ease-out}
-@keyframes land{0%{transform:translate(-50%,-50%) scale(.5)}}
+/* ---------- discs ---------- */
+.zone{position:absolute;left:0;top:0;width:150px;height:150px;z-index:1;pointer-events:none}
+.zone .face{position:absolute;inset:0;border-radius:50%;background:var(--d);color:var(--on);display:grid;place-items:center}
+.zone .big{font:500 68px/1 var(--display);letter-spacing:-.04em}
+.zone.fresh .face{animation:land .45s var(--spring) both}
+@keyframes land{from{transform:scale(0)}}
+.zone .face.pop{animation:press .3s var(--spring)}
+@keyframes press{from{transform:scale(.9)}}
+.zone .big.pop{animation:pop .3s var(--spring)}
+@keyframes pop{from{transform:scale(1.32)}}
+.zone .ripple{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 3px var(--w);animation:ripple .55s var(--ease) forwards}
+@keyframes ripple{from{opacity:.9}to{transform:scale(1.5);opacity:0}}
+.zone.bust .face{background:var(--k);color:var(--w)}
+.zone .float{position:absolute;left:50%;top:50%;height:46px;min-width:64px;margin:-23px 0 0 -32px;padding:0 14px;box-sizing:border-box;border-radius:999px;
+  background:var(--y);color:var(--k);display:grid;place-items:center;font:500 28px/1 var(--display);letter-spacing:-.02em;animation:floatup 1s var(--ease) forwards}
+@keyframes floatup{from{transform:translateY(-30px) scale(.5);opacity:0}25%{transform:translateY(-84px) scale(1);opacity:1}70%{opacity:1}to{transform:translateY(-124px);opacity:0}}
 
-#keepout{position:absolute;border:3px solid transparent;border-radius:28px;pointer-events:none;box-sizing:border-box}
-#keepout.nope{animation:nope .4s ease-out;border-color:var(--bust)}
-@keyframes nope{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+/* empty table: faint rings where fingers might go */
+.ring{position:absolute;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--w);opacity:.28;
+  pointer-events:none;animation:breathe 2.6s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.6;transform:scale(1.05)}}
+#keepout{position:absolute;border-radius:40px;box-shadow:inset 0 0 0 2px var(--w);opacity:0;pointer-events:none;box-sizing:border-box}
+#keepout.nope{animation:nope .45s var(--ease)}
+@keyframes nope{0%{opacity:.75}25%{transform:translateX(-6px)}60%{transform:translateX(5px)}100%{opacity:0;transform:translateX(0)}}
 
-#goad{position:absolute;left:50%;top:calc(max(14px,env(safe-area-inset-top,0px)) + 6px);transform:translateX(-50%);z-index:6;pointer-events:none;
-  display:flex;align-items:center;gap:12px;background:#ffd84d;border:4px solid var(--ink);border-radius:999px;padding:8px 22px 8px 16px;
-  box-shadow:6px 6px 0 var(--ink);animation:goadin .5s cubic-bezier(.2,1.5,.4,1) both,wiggle 1.2s .5s ease-in-out infinite}
-#goad .big{font:44px/1 var(--display);color:var(--ink)}
-#goad .eyebrow{color:var(--ink)}
-@keyframes goadin{0%{transform:translateX(-50%) translateY(-120%) scale(.6);opacity:0}100%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}
-@keyframes wiggle{0%,100%{transform:translateX(-50%) rotate(-2deg)}50%{transform:translateX(-50%) rotate(2deg)}}
-.zone .float{position:absolute;font:40px/1 var(--display);color:var(--ink);pointer-events:none;animation:floatup .9s ease-out forwards}
-@keyframes floatup{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-90px);opacity:0}}
+/* ---------- the middle of the table ---------- */
+#hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;width:min(340px,84vw);
+  display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;pointer-events:none}
+#hub button{pointer-events:auto} /* only controls catch taps; type in the middle lets taps fall through to the discs beneath */
+.eyebrow{font:500 12px/1.3 var(--text);letter-spacing:.18em;text-transform:uppercase;color:var(--w)}
+.line{font:400 16px/1.4 var(--text);color:var(--w-soft);text-wrap:balance;max-width:27ch}
+.line b{font-weight:500;color:var(--w)}
+.mark{font:500 clamp(84px,min(27vw,17.5vh),230px)/.84 var(--display);letter-spacing:-.02em;text-transform:uppercase;color:var(--w);margin:0 0 .06em}
+.readout{display:flex;align-items:flex-start;justify-content:center;white-space:nowrap;color:var(--w);
+  font:500 clamp(72px,calc((22 + 14*var(--s,0))*1vmin),300px)/.86 var(--display);letter-spacing:-.05em}
+.readout i{font-style:normal;font-size:.4em;line-height:1;margin:.15em 0 0 .1em;letter-spacing:0}
+.readout.xl{font-size:clamp(120px,48vmin,340px)}
+.readout.bump{animation:bump .28s var(--spring)}
+@keyframes bump{from{transform:scale(1.08)}}
+.readout.enter{animation:enter .5s var(--spring) both}
+@keyframes enter{from{transform:scale(.55);opacity:0}}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;min-height:54px}
 
-/* hub */
-#hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(300px,78vw);
-  display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;pointer-events:none}
-#hub button,#hub .roster{pointer-events:auto} /* only controls catch taps; text in the middle lets taps fall through to the discs beneath */
-.eyebrow{font:700 11px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim)}
-.huge{font:clamp(72px,22vmin,150px)/1 var(--display);font-variant-numeric:tabular-nums}
-.line{font:500 15px/1.35 var(--body);color:var(--ink-dim);text-wrap:balance;max-width:28ch}
-.range{display:inline-flex;align-items:baseline;gap:8px;padding:8px 16px;border-radius:999px;
-  background:var(--bust);color:#fff;border:4px solid var(--ink);box-shadow:6px 6px 0 var(--ink)}
-.range b{font:clamp(110px,46vmin,320px)/1 var(--display)}
-.range{padding:4px 30px;border-width:3px}
-#count{position:absolute;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vmin;
-  background:#ffd84d;pointer-events:none}
-#count .eyebrow{font-size:clamp(14px,3vmin,22px);color:var(--ink)}
-#count .huge{font-size:clamp(160px,72vmin,560px);color:#fff;-webkit-text-stroke:4px var(--ink);text-shadow:12px 12px 0 var(--ink);
-  animation:tickin .8s cubic-bezier(.2,1.3,.3,1) both}
-@keyframes tickin{0%{transform:scale(1.6);opacity:0}100%{transform:scale(1);opacity:1}}
-#count.soft{background:transparent;justify-content:flex-start;padding-top:calc(env(safe-area-inset-top,0px) + 6px);gap:0}
-#count.soft .huge{font-size:clamp(80px,22vmin,170px);color:#fff;-webkit-text-stroke:3px var(--ink);text-shadow:6px 6px 0 var(--ink)}
-#count.soft .eyebrow{background:var(--ink);color:#fff;padding:8px 14px;border-radius:999px}
-.range span{font:700 11px/1 var(--body);letter-spacing:.14em;text-transform:uppercase}
-button{font:700 15px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:#fff;
-  background:var(--ink);border:3px solid var(--ink);border-radius:999px;padding:14px 26px;cursor:pointer;touch-action:manipulation;
-  box-shadow:4px 4px 0 var(--bust)}
-button:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--bust)}
-button.ghost{background:var(--hub);color:var(--ink);padding:10px 20px;font-size:13px;box-shadow:4px 4px 0 var(--ink)}
-button.ghost:active{box-shadow:2px 2px 0 var(--ink)}
-button:focus-visible{outline:3px solid var(--safe);outline-offset:3px}
-.board{display:flex;flex-direction:column;gap:8px;width:100%;max-height:60vh;overflow:auto;background:var(--hub);
-  border:4px solid var(--line);border-radius:22px;padding:12px 16px;box-sizing:border-box;box-shadow:8px 8px 0 var(--ink)}
-.rowb{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:12px;border-bottom:3px solid var(--felt);padding-bottom:6px}
-.rowb:last-child{border-bottom:0;padding-bottom:0}
-.rowb .dot{width:18px;height:18px;border-radius:50%;background:var(--c);border:3px solid var(--ink)}
-.rowb .name{font:700 13px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;text-align:left}
-.rowb .gain{font:700 14px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;min-width:3.5ch;text-align:right}
-.rowb .b{color:var(--bust)} .rowb .s{color:var(--safe)}
-.rowb .total{font:clamp(44px,9vmin,72px)/1 var(--display);font-variant-numeric:tabular-nums;min-width:2ch;text-align:right}
-#hub.wide{width:min(440px,92vw)}
-.roster{display:flex;flex-direction:column;gap:6px;width:100%;max-height:34vh;overflow:auto;background:var(--hub);
-  border:3px solid var(--line);border-radius:16px;padding:10px 12px;box-sizing:border-box;box-shadow:6px 6px 0 var(--ink)}
-.roster div{display:flex;justify-content:space-between;font:500 14px/1.3 var(--body);gap:10px}
-.roster .who{display:flex;align-items:center;gap:8px}
-.roster .dot{width:12px;height:12px;border-radius:50%;background:var(--c);border:2px solid var(--ink)}
-.roster .verdict{font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-.roster .b{color:var(--bust)} .roster .s{color:var(--safe)}
-.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-.modes{display:flex;flex-direction:column;gap:10px;width:100%}
-button.mode{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;text-transform:none;letter-spacing:0;
-  background:var(--hub);color:var(--ink);border:3px solid var(--line);border-radius:18px;padding:16px 18px;width:100%;box-sizing:border-box;
-  box-shadow:6px 6px 0 var(--ink)}
-button.mode b{font:24px/1 var(--display)}
-button.mode span{font:500 13px/1.4 var(--body);color:var(--ink-dim)}
-button.mode:active{box-shadow:3px 3px 0 var(--ink)}
-#m-hands{background:#ffd84d} #m-ffa{background:#5fb3ff}
-#m-hands span,#m-ffa span{color:var(--ink);opacity:.75}
-#corner{position:absolute;left:max(14px,env(safe-area-inset-left,0px));top:max(14px,env(safe-area-inset-top,0px));
-  font:700 11px/1.4 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);pointer-events:none}
-#corner b{color:var(--ink)}
-#help{position:absolute;right:max(14px,env(safe-area-inset-right,0px));top:max(14px,env(safe-area-inset-top,0px));
-  width:40px;height:40px;padding:0;border-radius:50%;background:var(--hub);color:var(--ink);border:3px solid var(--line);
-  font:20px/1 var(--display);text-transform:none;letter-spacing:0;z-index:5;box-shadow:3px 3px 0 var(--ink)}
-#pauseBtn{position:absolute;right:calc(max(14px,env(safe-area-inset-right,0px)) + 100px);top:max(14px,env(safe-area-inset-top,0px));
-  width:40px;height:40px;padding:0;border-radius:50%;background:var(--hub);color:var(--ink);border:3px solid var(--line);
-  font:700 12px/1 var(--body);letter-spacing:-.1em;text-transform:none;z-index:5;box-shadow:3px 3px 0 var(--ink)}
-#settingsBtn{position:absolute;right:calc(max(14px,env(safe-area-inset-right,0px)) + 50px);top:max(14px,env(safe-area-inset-top,0px));
-  width:40px;height:40px;padding:0;border-radius:50%;background:var(--hub);color:var(--ink);border:3px solid var(--line);
-  font:22px/1 var(--body);text-transform:none;letter-spacing:0;z-index:5;box-shadow:3px 3px 0 var(--ink)}
-#settings{position:absolute;inset:0;z-index:20;background:rgba(243,238,227,.9);display:flex;align-items:center;justify-content:center;
-  padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
-#settings .card{width:min(400px,100%);max-height:100%;overflow:auto;background:var(--hub);border:3px solid var(--line);border-radius:20px;padding:22px;box-sizing:border-box;
-  display:flex;flex-direction:column;gap:14px;box-shadow:8px 8px 0 var(--ink)}
-#settings h2{margin:0;font:28px/1 var(--display)}
-#settings .hint{font:500 13px/1.4 var(--body);color:var(--ink-dim);margin:0;min-height:1.4em}
-button.mode.on{outline:4px solid var(--bust);outline-offset:-4px}
-button.mode.on b::after{content:" ✓";color:var(--bust)}
-#pause{position:absolute;inset:0;z-index:20;background:rgba(243,238,227,.9);display:flex;align-items:center;justify-content:center;
-  padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
-#pause .card{width:min(320px,100%);background:var(--hub);border:3px solid var(--line);border-radius:20px;padding:22px;box-sizing:border-box;
-  display:flex;flex-direction:column;gap:16px;text-align:center;box-shadow:8px 8px 0 var(--ink)}
-#pause h2{margin:0;font:28px/1 var(--display)}
-#rules{position:absolute;inset:0;z-index:20;background:rgba(243,238,227,.9);display:flex;align-items:center;justify-content:center;
-  padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
-#rules .card{max-width:420px;width:100%;max-height:100%;overflow:auto;background:var(--hub);border:3px solid var(--line);border-radius:20px;
-  padding:22px 22px 18px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;box-shadow:8px 8px 0 var(--ink)}
-#rules h2{margin:0;font:28px/1 var(--display)}
-#rules ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px;font:500 15px/1.45 var(--body)}
-#rules li::marker{color:var(--bust);font-weight:700}
-#rules b{color:var(--ink)} #rules ol{color:var(--ink-dim)}
-#rules .hint{font:500 13px/1.4 var(--body);color:var(--ink-dim);border-top:1px solid var(--line);padding-top:12px;margin:0}
-#boom{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;pointer-events:none}
+button{font:500 15px/1 var(--text);letter-spacing:.14em;text-transform:uppercase;height:54px;padding:0 30px;margin:0;border:0;border-radius:999px;
+  background:var(--w);color:var(--m);cursor:pointer;touch-action:manipulation;transition:transform .15s var(--spring);-webkit-tap-highlight-color:transparent}
+button:active{transform:scale(.95)}
+button.ghost{background:transparent;color:var(--w);box-shadow:inset 0 0 0 1.5px currentColor}
+button:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+
+/* ---------- corner furniture ---------- */
+/* solid paper, so it stays legible when a disc is planted underneath */
+#corner{position:absolute;left:max(16px,env(safe-area-inset-left,0px));top:22px;z-index:2;height:32px;padding:0 14px 0 15px;border-radius:999px;
+  display:flex;align-items:center;background:var(--w);color:var(--m);font:500 12px/1 var(--text);letter-spacing:.16em;text-transform:uppercase;
+  white-space:nowrap;pointer-events:none}
+#corner:empty{display:none}
+#ctrl{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:16px;z-index:5;display:flex;gap:8px}
+.cbtn{width:44px;height:44px;padding:0;display:grid;place-items:center;background:var(--w);color:var(--m);
+  font:500 20px/1 var(--text);letter-spacing:0;text-transform:none}
+#stage[data-on="k"] .cbtn{background:rgba(20,16,18,.08);color:var(--k)} /* on a light sheet */
+#stage[data-on="w"] .cbtn{color:var(--k)}                                /* on a dark sheet */
+
+/* ---------- capsules that drop in under the top bar ---------- */
+.capsule{position:absolute;left:50%;top:74px;transform:translateX(-50%);z-index:6;pointer-events:none;display:flex;align-items:center;gap:14px;
+  height:72px;padding:0 28px 0 24px;border-radius:999px;white-space:nowrap;animation:drop .5s var(--spring) both}
+@keyframes drop{from{transform:translate(-50%,-150%) scale(.7);opacity:0}}
+.capsule .big{font:500 46px/1 var(--display);letter-spacing:-.04em}
+.capsule.mid{height:60px;padding:0 24px 0 20px}
+.capsule.mid .big{font-size:38px}
+.capsule .lbl{font:500 12px/1.4 var(--text);letter-spacing:.16em;text-transform:uppercase;text-align:left}
+#goad{background:var(--y);color:var(--k);animation:drop .5s var(--spring) both,nudge 1.1s .5s ease-in-out infinite}
+@keyframes nudge{0%,100%{transform:translateX(-50%) rotate(-1.6deg)}50%{transform:translateX(-50%) rotate(1.6deg)}}
+#count.soft{background:var(--w);color:var(--k)}
+#count.soft #cd{color:var(--m);min-width:.6em;text-align:center;animation:tick .45s var(--spring) both}
+@keyframes tick{from{transform:scale(1.6);opacity:0}}
+
+/* ---------- colour takeovers: each one is a disc that grows from its origin to fill the table ---------- */
+@keyframes wipe{from{clip-path:circle(0% at var(--ox,50%) var(--oy,50%))}to{clip-path:circle(142% at var(--ox,50%) var(--oy,50%))}}
+
+/* cyan: the count-in (Throw Hands) */
+#count:not(.soft){position:absolute;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1vmin;
+  background:var(--c);color:var(--k);pointer-events:none;animation:wipe .5s var(--ease) both}
+#count:not(.soft) .eyebrow{color:var(--k);font-size:clamp(12px,2.6vmin,18px)}
+#count:not(.soft) #cd{font:500 clamp(180px,78vmin,620px)/.84 var(--display);letter-spacing:-.05em;animation:tick .6s var(--spring) both}
+
+/* black: the bust */
+#boom{position:absolute;inset:0;z-index:30;display:grid;place-items:center;pointer-events:none}
 #boom canvas{position:absolute;inset:0;width:100%;height:100%}
-#boom .word{position:relative;font:clamp(90px,34vmin,260px)/.9 var(--display);color:#fff;text-transform:uppercase;
-  letter-spacing:-.02em;-webkit-text-stroke:3px var(--ink);text-shadow:10px 10px 0 var(--ink);animation:slam .7s cubic-bezier(.2,1.4,.3,1) both}
-#boom .who{position:relative;font:700 clamp(16px,4vmin,28px)/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:#fff;
-  background:var(--ink);padding:10px 16px;border-radius:999px;margin-top:14px;animation:slam .6s .15s cubic-bezier(.2,1.4,.3,1) both}
-#boom .stack{position:relative;display:flex;flex-direction:column;align-items:center}
-@keyframes slam{0%{transform:scale(4);opacity:0}100%{transform:scale(1);opacity:1}}
+#boom .word{position:relative;font:600 clamp(96px,36vmin,300px)/.84 var(--display);letter-spacing:-.035em;text-transform:uppercase;color:var(--w);
+  animation:slam .6s var(--spring) both}
+@keyframes slam{from{transform:scale(3.2);opacity:0}}
+#boom.quick{animation:flashout .65s linear both}
+#boom.quick .word{font-size:clamp(72px,25vmin,190px);animation-duration:.3s}
+@keyframes flashout{0%,55%{opacity:1}100%{opacity:0}}
 #boom.fade{animation:boomout .45s ease-in forwards}
-#boom.quick .word{font-size:clamp(70px,24vmin,180px);animation-duration:.35s}
-#boom.quick.fade{animation-duration:.2s}
 @keyframes boomout{to{opacity:0}}
 .shake{animation:shake .5s linear}
 @keyframes shake{10%,90%{transform:translate(-2px,1px)}20%,80%{transform:translate(4px,-2px)}30%,50%,70%{transform:translate(-7px,3px)}40%,60%{transform:translate(7px,-3px)}}
-.flash{animation:flash .5s ease-out}
-@keyframes flash{0%{background:color-mix(in srgb,var(--bust) 40%,var(--felt))}100%{background:transparent}}
+
+/* white (between rounds) or the winner's colour (game over): the middle becomes a full sheet */
+#hub.sheet{left:0;top:0;width:100%;height:100%;transform:none;z-index:3;box-sizing:border-box;gap:0;pointer-events:auto;
+  background:var(--ground);color:var(--fg);overflow-y:auto;touch-action:pan-y;
+  padding-block:min(76px,12vh) 32px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));
+  animation:wipe .5s var(--ease) both}
+#hub.sheet .col{margin:auto;width:min(520px,100%);display:flex;flex-direction:column;align-items:center;gap:24px}
+.sheet .eyebrow{color:inherit}
+.sheet .line{color:inherit;opacity:.72}
+.sheet button{background:var(--fg);color:var(--ground)}
+.paper .eyebrow{color:var(--m)}
+.paper .line{color:var(--k-soft);opacity:1}
+.paper button{background:var(--m);color:var(--w)}
+.paper button.ghost{background:transparent;color:var(--k)}
+
+.board{width:100%;display:flex;flex-direction:column}
+.rowb{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;column-gap:14px;padding:9px 2px;
+  border-top:1px solid rgba(128,128,128,.35);border-top:1px solid color-mix(in srgb,currentColor 16%,transparent)}
+.rowb:last-child{border-bottom:1px solid rgba(128,128,128,.35);border-bottom:1px solid color-mix(in srgb,currentColor 16%,transparent)}
+.rowb[data-id]{cursor:pointer}
+.chip{width:30px;height:30px;border-radius:50%;background:var(--d);box-shadow:inset 0 0 0 1px rgba(128,128,128,.45);box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 24%,transparent)}
+.rowb .name{font:500 13px/1 var(--text);letter-spacing:.16em;text-transform:uppercase;text-align:left}
+.rowb .gain{font:500 16px/1 var(--text);letter-spacing:.04em;color:var(--m);text-align:right}
+.rowb .gain.b{font-size:11px;letter-spacing:.16em;text-transform:uppercase;background:var(--k);color:var(--w);padding:6px 9px 5px 10px;border-radius:999px}
+.rowb .total{font:500 clamp(40px,min(22vmin,calc(52vh/var(--n,4))),170px)/.9 var(--display);letter-spacing:-.045em;min-width:1.2em;text-align:right}
+.board.final .total{font-size:clamp(30px,min(10vmin,calc(32vh/var(--n,4))),72px)}
+.board.final .chip{width:26px;height:26px}
+.board.final .rowb{padding-block:7px}
+.champ{font:500 clamp(60px,21vmin,220px)/.86 var(--display);letter-spacing:-.035em;text-transform:uppercase;text-wrap:balance;margin-top:-10px}
+.champ.tie{font-size:clamp(40px,12vmin,120px);line-height:.92}
+
+/* ---------- paper sheets: rules, settings, pause ---------- */
+.overlay{position:absolute;inset:0;z-index:20;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;
+  background:var(--w);color:var(--k);overflow-y:auto;touch-action:pan-y;
+  padding-block:min(84px,14vh) 40px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));
+  animation:wipe .45s var(--ease) both;--oy:38px}
+#pause{--ox:calc(100% - 142px)}
+#settings{z-index:21;--ox:calc(100% - 90px)}
+#rules{z-index:22;--ox:calc(100% - 38px)}
+.overlay .col{margin:0 auto;width:min(460px,100%);display:flex;flex-direction:column;gap:26px;text-align:left}
+.overlay .col.center{margin:auto;align-items:center;text-align:center}
+.overlay .x{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:16px;background:rgba(20,16,18,.08);color:var(--k)}
+.overlay h2{margin:0;font:500 clamp(44px,12vmin,72px)/.9 var(--display);letter-spacing:-.035em}
+.overlay .col>button{align-self:flex-start}
+.stack{display:flex;flex-direction:column;gap:10px;width:min(280px,100%)}
+.group{display:flex;flex-direction:column;gap:8px}
+.hint{font:400 14px/1.5 var(--text);color:var(--k-soft);margin:0;text-wrap:pretty}
+.hint:empty{display:none}
+
+.opts{display:flex;flex-direction:column}
+.paper button.opt{height:auto;width:100%;display:grid;grid-template-columns:1fr auto;column-gap:18px;align-items:center;text-align:left;
+  text-transform:none;letter-spacing:0;background:transparent;color:var(--k);border-radius:0;padding:15px 0;border-top:1px solid var(--k-hair)}
+.paper button.opt:last-child{border-bottom:1px solid var(--k-hair)}
+.paper button.opt:active{transform:none;opacity:.55}
+.opt .t{grid-column:1;font:500 20px/1.2 var(--text)}
+.opt .d{grid-column:1;font:400 14px/1.45 var(--text);color:var(--k-soft);margin-top:4px}
+.opt::after{content:"";grid-column:2;grid-row:1/span 2;width:24px;height:24px;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(20,16,18,.3)}
+.opt.on::after{background:var(--w);box-shadow:inset 0 0 0 7.5px var(--m)}
+
+.steps{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column}
+.steps li{counter-increment:s;display:grid;grid-template-columns:36px 1fr;align-items:baseline;padding:13px 0;border-top:1px solid var(--k-hair);
+  font:400 16px/1.45 var(--text);color:var(--k-soft)}
+.steps li:last-child{border-bottom:1px solid var(--k-hair)}
+.steps li::before{content:counter(s);font:500 22px/1 var(--display);color:var(--m)}
+.steps b{font-weight:500;color:var(--k)}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
 </head>
 <body>
-<div id="stage">
+<div id="stage" data-on="m">
   <div id="corner"></div>
   <div id="hub"></div>
-  <button id="help" aria-label="How to play">?</button>
-  <button id="pauseBtn" aria-label="Pause" hidden>❚❚</button>
-  <button id="settingsBtn" aria-label="Settings">⚙</button>
-  <div id="settings" hidden>
-    <div class="card">
-      <h2>Settings</h2>
-      <div class="eyebrow" style="text-align:left">Game mode</div>
-      <div class="modes">
-        <button class="mode" id="m-ffa"><b>Free For All</b><span>Anyone taps any time. Every tap can bust, and the odds only go up. Stop tapping to end the round.</span></button>
-        <button class="mode" id="m-hands"><b>Throw Hands</b><span>3-2-1, show fingers, count up in order. Cross the bust line and the odds climb.</span></button>
-      </div>
-      <div class="eyebrow" style="text-align:left" id="bustLabel">Free for all · on a bust</div>
-      <div class="modes" id="bustOpts">
-        <button class="mode" id="b-knock"><b>That player is out</b><span>The round keeps going for everyone else. Odds keep climbing.</span></button>
-        <button class="mode" id="b-end"><b>Round ends</b><span>One bust and everyone banks what they have.</span></button>
-      </div>
-      <p class="hint" id="modeNote"></p>
-      <button id="closeSettings">Done</button>
-    </div>
+  <div id="ctrl">
+    <button class="cbtn" id="pauseBtn" aria-label="Pause" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4.2" height="14" rx="1.2"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.2"/></svg></button>
+    <button class="cbtn" id="settingsBtn" aria-label="Settings"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 8h8.5M19.5 8h.5M4 16h.5M11.5 16H20" fill="none"/><circle cx="16" cy="8" r="2.6" fill="none"/><circle cx="8" cy="16" r="2.6" fill="none"/></svg></button>
+    <button class="cbtn" id="help" aria-label="How to play">?</button>
   </div>
-  <div id="pause" hidden>
-    <div class="card">
+
+  <div id="pause" class="overlay paper" hidden>
+    <div class="col center">
       <h2>Paused</h2>
-      <div class="row" style="flex-direction:column;align-items:stretch">
+      <div class="stack">
         <button id="resume">Resume</button>
         <button class="ghost" id="endgame">End game</button>
       </div>
     </div>
   </div>
-  <div id="rules" hidden>
-    <div class="card">
+
+  <div id="settings" class="overlay paper" hidden>
+    <button class="cbtn x" data-close="settings" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none"/></svg></button>
+    <div class="col">
+      <h2>Settings</h2>
+      <div class="group">
+        <div class="eyebrow">Game mode</div>
+        <div class="opts">
+          <button class="opt" id="m-ffa"><span class="t">Free For All</span><span class="d">Anyone taps any time. Every tap can bust, and the odds only go up. Stop tapping to end the round.</span></button>
+          <button class="opt" id="m-hands"><span class="t">Throw Hands</span><span class="d">3-2-1, show fingers, count up in order. Cross the bust line and the odds climb.</span></button>
+        </div>
+      </div>
+      <div class="group" id="bustGroup">
+        <div class="eyebrow">On a bust</div>
+        <div class="opts">
+          <button class="opt" id="b-knock"><span class="t">That player is out</span><span class="d">The round keeps going for everyone else. Odds keep climbing.</span></button>
+          <button class="opt" id="b-end"><span class="t">Round ends</span><span class="d">One bust and everyone banks what they have.</span></button>
+        </div>
+      </div>
+      <p class="hint" id="modeNote"></p>
+      <button id="closeSettings">Done</button>
+    </div>
+  </div>
+
+  <div id="rules" class="overlay paper" hidden>
+    <button class="cbtn x" data-close="rules" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none"/></svg></button>
+    <div class="col">
       <h2>How to play</h2>
-      <ol>
-        <li><b>Set the table.</b> Lay the phone flat in the middle. Everyone touches the screen once. That spot is yours.</li>
-        <li><b>Check the bust line.</b> Before each round the middle shows a number, like 12+. Every tap below it is safe. From 12 on, each tap might bust, and the odds get worse with every tap past it. It's never a sure thing.</li>
-        <li><b>3, 2, 1, fingers!</b> Everyone throws one hand, 0 to 5 fingers, at once.</li>
-        <li><b>Count up.</b> Lowest hand goes first: tap your spot once per finger. Then the next lowest keeps the count going, and so on.</li>
-        <li><b>Bust.</b> If one of your taps busts, you get nothing this round. Same for everyone who hadn't gone yet.</li>
-        <li><b>Score.</b> Everyone who survives the round gets a point. Nobody ever sits out. Most points after 10 rounds wins.</li>
+      <ol class="steps">
+        <li><span><b>Set the table.</b> Lay the phone flat in the middle. Everyone touches the screen once. That spot is yours.</span></li>
+        <li><span><b>Tap whenever you like.</b> No turns, no order. Each tap you land is a point.</span></li>
+        <li><span><b>Watch the odds.</b> The number in the middle is the chance the next tap busts. It starts tiny and climbs with every tap, at a different pace each round.</span></li>
+        <li><span><b>Bank or bust.</b> Bust and you get zero for the round and sit out the rest of it while everyone else keeps going.</span></li>
+        <li><span><b>Bonus taps.</b> Now and then a yellow tag drops in: the next tap is worth that many points instead of one. Same bust odds as any other tap.</span></li>
+        <li><span><b>Quiet ends it.</b> If nobody taps for 10 seconds, a 3-2-1 runs. Tap to keep going, or let it finish and everyone banks.</span></li>
+        <li><span><b>Win.</b> Most points after 10 rounds.</span></li>
       </ol>
-      <p class="hint">Showed zero fingers? You don't tap. If you get marked out by mistake, tap your spot on the results screen to flip it.</p>
-      <h2 style="font-size:20px">Free for all</h2>
-      <ol>
-        <li><b>No order, no hands.</b> Anyone taps their spot whenever they like.</li>
-        <li><b>Watch the odds.</b> The middle shows the chance the next tap busts. It starts tiny and climbs with every tap, at a different pace each round.</li>
-        <li><b>Bank or bust.</b> Each tap you land is a point. Bust and you get zero for the round and sit out the rest of it while everyone else keeps going. (Settings can make a bust end the round instead.)</li>
-        <li><b>Bonus taps.</b> Now and then a yellow tag pops up: the next tap is worth that many points instead of one. Same bust odds as any other tap.</li>
-        <li><b>Quiet ends it.</b> If nobody taps for 10 seconds, a 3-2-1 runs. Tap to keep going, or let it finish and everyone banks.</li>
+      <p class="hint">Settings can make a bust end the round for everyone instead.</p>
+      <div class="group">
+        <div class="eyebrow">Throw Hands</div>
+        <p class="hint">A second way to play. Pick it in settings.</p>
+      </div>
+      <ol class="steps">
+        <li><span><b>Check the bust line.</b> Before each round the middle shows a number, like 12+. Every tap below it is safe. From 12 on, each tap might bust, and the odds get worse with every tap past it. It's never a sure thing.</span></li>
+        <li><span><b>3, 2, 1, fingers!</b> Everyone throws one hand, 0 to 5 fingers, at once.</span></li>
+        <li><span><b>Count up.</b> Lowest hand goes first: tap your spot once per finger. Then the next lowest keeps the count going, and so on.</span></li>
+        <li><span><b>Bust.</b> If one of your taps busts, you get nothing this round. Same for everyone who hadn't gone yet.</span></li>
+        <li><span><b>Score.</b> Everyone who survives the round gets a point. Most points after 10 rounds wins.</span></li>
       </ol>
+      <p class="hint">Showed zero fingers? You don't tap. If you get marked as a bust by mistake, tap your name on the score sheet to flip it.</p>
       <button id="closeRules">Got it</button>
     </div>
   </div>
 </div>
 
 <script>
-const COLORS=['#ff8a3d','#4ee1a0','#5fb3ff','#ffd84d','#ff6fb1','#b78cff','#7be0ff','#ffb27a'];
-const NAMES=['Orange','Green','Blue','Yellow','Pink','Purple','Sky','Peach'];
+/* Players, in the order fingers land. On the magenta table the first two discs are yellow and cyan; black is kept for the bust.
+   `on` is the ink that reads on that colour: k (key) or w (white). */
+const PLAYERS=[
+  {name:'Yellow',bg:'#ffe033',on:'k'},{name:'Cyan',bg:'#16bdf2',on:'k'},{name:'White',bg:'#ffffff',on:'k'},{name:'Blue',bg:'#2340e0',on:'w'},
+  {name:'Orange',bg:'#ff8a1f',on:'k'},{name:'Mint',bg:'#6fe6b4',on:'k'},{name:'Lilac',bg:'#c9b6ff',on:'k'},{name:'Brown',bg:'#7a3f16',on:'w'}];
+const INK={k:'var(--k)',w:'var(--w)'};
 const R=105; // tap hit radius px, wider than the disc so a slightly-off finger still counts
 const MAX_ROUNDS=10;
 const stage=document.getElementById('stage'), hub=document.getElementById('hub'), corner=document.getElementById('corner');
 const S={phase:'lobby',mode:'ffa',bustEnds:false,zones:[],round:0,count:0,low:0,high:0,bust:0,width:0,timer:null,idle:null,ending:false,base:0,step:0};
+let tone='m', sheetKey=''; // tone: the ground the corner controls sit on. m = the magenta table, k = a light sheet (ink controls), w = a dark sheet
 const IDLE_MS=10000; // free-for-all: silence this long starts the end-of-round countdown
 const GOAD_MS=3500, GOAD_P=0.3, GOAD_MAX=1; // free-for-all: after this much quiet, maybe dangle a bonus on the next tap (at most GOAD_MAX per round)
 
@@ -244,7 +299,7 @@ const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const cx=()=>stage.clientWidth/2, cy=()=>stage.clientHeight/2;
 const active=()=>S.zones.filter(z=>!z.sat);
 
-/* ---------- bust range ---------- */
+/* ---------- bust odds ---------- */
 const BASE_P=0.15, STEP_P=0.12, CAP_P=0.9; // bust odds at N, growth per tap past N, hard ceiling
 function dealRange(){
   const n=active().length;
@@ -261,17 +316,25 @@ function ffaChance(c){
 }
 // odds that the tap bringing the count to c busts: hands mode is 0 below N then rising; free-for-all creeps then climbs. Never certain.
 const bustChance=c=>Math.min(CAP_P,S.mode==='ffa'?ffaChance(c):(c<S.low?0:BASE_P+STEP_P*(c-S.low)));
-const pct=c=>{const p=bustChance(c)*100;return (p<10?p.toFixed(p<1?2:1).replace(/\.?0+$/,''):Math.round(p))+'%'};
+const pctNum=c=>{const p=bustChance(c)*100;return p<10?p.toFixed(p<1?2:1).replace(/\.?0+$/,''):String(Math.round(p))};
+const pct=c=>pctNum(c)+'%';
+// the middle number swells from small to extra large as the odds climb toward 10%
+const swell=c=>Math.pow(Math.min(1,bustChance(c)/0.10),0.7);
 
 /* ---------- zone helpers ---------- */
 function zoneAt(x,y){let best=null,bd=R*R;for(const z of S.zones){const d=(z.x-x)**2+(z.y-y)**2;if(d<bd){bd=d;best=z}}return best}
-// keep-out box around the middle readout, so no disc ends up under the bust %
+// keep-out box around the middle, so no disc ends up under the number (at its largest) or the start panel
 function keepOut(){
-  if(S.phase==='lobby'){ // lobby: keep discs off the whole start panel (wordmark, text, buttons), plus a disc radius
-    const r=hub.getBoundingClientRect(),st=stage.getBoundingClientRect();
-    return {hw:r.width/2+60,hh:(r.height/2)+80,cx:r.left-st.left+r.width/2,cy:r.top-st.top+r.height/2};
+  const st=stage.getBoundingClientRect(), vmin=Math.min(st.width,st.height)/100;
+  const fsR=Math.min(300,Math.max(72,36*vmin)), fsX=Math.min(340,Math.max(120,48*vmin)); // readout at XL, and the Throw Hands bust line
+  let hw=Math.max(fsR*.95,fsX*.72)+80, hh=fsX*.45+85, kx=st.width/2, ky=st.height/2;
+  if(S.phase==='lobby'){ // plus the whole start panel (wordmark, buttons) and a disc radius around it
+    const r=hub.getBoundingClientRect();
+    const l=Math.min(kx-hw,r.left-st.left-60), rt=Math.max(kx+hw,r.right-st.left+60);
+    const t=Math.min(ky-hh,r.top-st.top-80), b=Math.max(ky+hh,r.bottom-st.top+80);
+    kx=(l+rt)/2;ky=(t+b)/2;hw=(rt-l)/2;hh=(b-t)/2;
   }
-  const w=Math.min(300,stage.clientWidth*.78);return {hw:w/2+40,hh:110,cx:cx(),cy:cy()};
+  return {hw,hh,cx:kx,cy:ky};
 }
 function inKeepOut(x,y){const k=keepOut();return Math.abs(x-k.cx)<k.hw&&Math.abs(y-k.cy)<k.hh}
 function addZone(x,y){
@@ -280,88 +343,120 @@ function addZone(x,y){
     if(navigator.vibrate)navigator.vibrate([30,30,30]);
     return;
   }
-  const used=new Set(S.zones.map(z=>z.ci));let ci=0;while(used.has(ci)&&ci<COLORS.length)ci++;
-  if(ci>=COLORS.length)return;
-  S.zones.push({id:Date.now()+Math.random(),x,y,ci,color:COLORS[ci],name:NAMES[ci],taps:0,bonus:0,went:false,bust:false,sat:false,score:0,fresh:true});
+  const used=new Set(S.zones.map(z=>z.ci));let ci=0;while(used.has(ci)&&ci<PLAYERS.length)ci++;
+  if(ci>=PLAYERS.length)return;
+  const p=PLAYERS[ci];
+  S.zones.push({id:Date.now()+Math.random(),x,y,ci,color:p.bg,on:p.on,name:p.name,taps:0,bonus:0,went:false,bust:false,sat:false,score:0,fresh:true});
 }
 function renderZones(){
-  for(const el of stage.querySelectorAll('.zone,#keepout'))el.remove();
+  for(const el of stage.querySelectorAll('.zone,.ring,#keepout'))el.remove();
   if(S.phase==='final')return; // game over: the table is cleared, only the scores remain
-  if(S.phase==='lobby'){const k=keepOut(),ko=document.createElement('div');ko.id='keepout';
-    ko.style.cssText=`left:${k.cx-k.hw}px;top:${k.cy-k.hh}px;width:${k.hw*2}px;height:${k.hh*2}px`;stage.appendChild(ko)}
+  if(S.phase==='lobby'){
+    const k=keepOut(),ko=document.createElement('div');ko.id='keepout';
+    ko.style.cssText=`left:${k.cx-k.hw}px;top:${k.cy-k.hh}px;width:${k.hw*2}px;height:${k.hh*2}px`;stage.appendChild(ko);
+    if(S.zones.length<2){ // an empty table shows faint rings where fingers might go
+      const W=stage.clientWidth,H=stage.clientHeight;
+      [[.24,.17],[.76,.83],[.76,.17],[.24,.83]].forEach(([fx,fy],i)=>{
+        const x=fx*W,y=fy*H;
+        if(inKeepOut(x,y)||S.zones.some(z=>Math.hypot(z.x-x,z.y-y)<170))return;
+        const r=document.createElement('div');r.className='ring';r.style.cssText=`left:${x}px;top:${y}px;animation-delay:${-i*.65}s`;stage.appendChild(r);
+      });
+    }
+  }
   for(const z of S.zones){
     const el=document.createElement('div');
-    el.className='zone'+(z.fresh?' fresh':'')+(z.sat?' sat':'')+(z.bust?' bust':'')+(z.went&&!z.bust?' went':'');
+    el.className='zone'+(z.fresh?' fresh':'')+(z.bust?' bust':'');
     z.fresh=false;
-    const ang=Math.atan2(z.y-cy(),z.x-cx())*180/Math.PI+90; // text "up" points away from the hub, toward the seat
-    el.style.setProperty('--c',z.color);
-    el.style.left=z.x+'px';el.style.top=z.y+'px';
-    el.style.transform=`translate(-50%,-50%) rotate(${ang}deg)`;
+    const ang=Math.atan2(z.y-cy(),z.x-cx())*180/Math.PI-90; // the numeral's foot points out toward its player's seat, so it reads upright from there
+    el.style.cssText=`left:${z.x}px;top:${z.y}px;transform:translate(-50%,-50%) rotate(${ang}deg);--d:${z.color};--on:${INK[z.on]}`;
     let big='';
-    if(S.phase==='lobby')big='☝';
-    else if(z.sat)big='zz';
-    else if(S.phase==='tap')big=z.bust?'✕':String(z.taps+z.bonus); // the disc shows what you'd bank right now, bonus included
-    else if(S.phase==='result'||S.phase==='boom')big=z.bust?(S.mode==='ffa'?'0':'✕'):(S.mode==='ffa'?'+'+(z.taps+z.bonus):'+1');
-    else big=String(z.score);
-    el.innerHTML=`<div class="big">${big}</div>`;
+    if(S.phase==='tap')big=z.bust?'×':String(z.taps+z.bonus); // the disc shows what you'd bank right now, bonus included
+    else if(S.phase==='result'||S.phase==='boom')big=z.bust?'×':(S.mode==='ffa'?'+'+(z.taps+z.bonus):'+1');
+    el.innerHTML=`<div class="face"><div class="big">${big}</div></div>`;
     el.dataset.id=z.id;
     stage.appendChild(el);
   }
 }
 
 /* ---------- hub ---------- */
-function setHub(html){hub.innerHTML=html;hub.classList.toggle('wide',S.phase==='result')}
+// sheet: {key, ground, fg, paper, ox, oy} turns the middle into a full-screen sheet of colour that wipes in from (ox, oy)
+function setHub(html,sheet){
+  hub.innerHTML=html;
+  const key=sheet?sheet.key:'';
+  if(key!==sheetKey){ // a new sheet wipes in; the same sheet re-rendering stays put
+    hub.classList.remove('sheet');
+    if(sheet){void hub.offsetWidth;hub.classList.add('sheet');hub.scrollTop=0}
+    sheetKey=key;
+  }
+  hub.classList.toggle('paper',!!(sheet&&sheet.paper));
+  hub.style.cssText=sheet?`--ground:${sheet.ground};--fg:${sheet.fg};--ox:${sheet.ox||'50%'};--oy:${sheet.oy||'50%'}`:'';
+}
+const readout=(num,unit,c)=>`<div class="readout ${S.count?'bump':'enter'}" style="--s:${swell(c).toFixed(3)}">${num}${unit?`<i>${unit}</i>`:''}</div>`;
 function renderHub(){
   const n=S.zones.length, ffa=S.mode==='ffa';
+  tone='m';
   if(S.phase==='lobby'){
-    setHub(`<div class="huge" style="font-size:clamp(84px,26vmin,170px);line-height:.9;color:var(--bust);-webkit-text-stroke:3px var(--ink);text-shadow:8px 8px 0 var(--ink)">Taps</div>
+    setHub(`<div class="mark">Tap<br>App</div>
       ${ffa?'':'<div class="eyebrow">Throw hands</div>'}
       <div class="row">${n>=2?'<button id="go">Start</button>':''}${n?'<button class="ghost" id="clear">Clear</button>':''}</div>`);
   }else if(S.phase==='range'){
-    setHub(`<div class="eyebrow">Round ${S.round} of ${MAX_ROUNDS} · bust zone</div>
-      <div class="range"><b>${S.low}<span style="font:inherit;font-size:.5em;letter-spacing:0;text-transform:none;vertical-align:.4em">+</span></b></div>
+    setHub(`<div class="eyebrow">Bust line</div>
+      <div class="readout xl enter">${S.low}<i>+</i></div>
       <div class="line">Safe below ${S.low}. From ${S.low} on, every tap can bust, and the odds climb with each one.</div>`);
   }else if(S.phase==='count'){
     setHub('');
-    const ov=document.createElement('div');ov.id='count';
-    ov.innerHTML=`<div class="eyebrow">Bust ${S.low}+ · get a hand ready</div><div class="huge" id="cd">3</div>`;
-    stage.appendChild(ov);
+    if(!document.getElementById('count')){
+      const ov=document.createElement('div');ov.id='count';
+      ov.innerHTML=`<div class="eyebrow">Bust ${S.low}+ · get a hand ready</div><div id="cd">3</div>`;
+      stage.appendChild(ov);
+    }
   }else if(S.phase==='tap'&&ffa){
-    const nxt=S.count+1;
-    setHub(`<div class="huge" id="total" style="color:var(--bust)">${pct(nxt)}</div>`);
+    setHub(readout(pctNum(S.count+1),'%',S.count+1));
   }else if(S.phase==='tap'){
-    const nxt=S.count+1, hot=nxt>=S.low;
+    const nxt=S.count+1, hot=nxt>=S.low, left=S.low-S.count-1;
     setHub(`<div class="eyebrow">Bust ${S.low}+ · lowest hand first</div>
-      <div class="huge" id="total" style="${hot?'color:var(--bust)':''}">${S.count}</div>
-      <div class="line">${S.count===0?'Show fingers. Lowest player taps their number in their spot.':hot?'Next tap busts <b style="color:var(--bust)">'+pct(nxt)+'</b> of the time.':'Safe for '+(S.low-S.count-1)+' more tap'+(S.low-S.count-1===1?'':'s')+'.'}</div>
+      ${readout(S.count,'',nxt)}
+      <div class="line">${S.count===0?'Show fingers. Lowest player taps their number in their spot.':hot?`Next tap busts <b>${pct(nxt)}</b> of the time.`:`Safe for ${left} more tap${left===1?'':'s'}.`}</div>
       <button class="ghost" id="end">Everyone's gone</button>`);
   }else if(S.phase==='boom'){
     setHub('');
   }else if(S.phase==='result'){
-    // round recap: running totals, big. this round's gain (or the bust) rides along small. ordered by total.
+    // between rounds: a white score sheet. running totals, very large; this round's gain (or the bust) rides along small. ordered by total.
+    tone='k';
     const rows=[...S.zones].map(z=>({z,pts:z.bust?0:(ffa?z.taps+z.bonus:1)})).map(r=>({...r,total:r.z.score+r.pts}))
       .sort((a,b)=>(b.total-a.total)||(b.pts-a.pts));
-    setHub(`<div class="eyebrow">Round ${S.round} of ${MAX_ROUNDS}</div>
-      <div class="board">${rows.map(({z,pts,total})=>`<div class="rowb" style="--c:${z.color}">
-        <span class="dot"></span><span class="name">${z.name}</span>
-        <span class="gain ${z.bust?'b':'s'}">${z.bust?'Bust':'+'+pts}</span>
+    setHub(`<div class="col">
+      <div class="eyebrow">Round ${S.round} of ${MAX_ROUNDS}</div>
+      <div class="board" style="--n:${rows.length}">${rows.map(({z,pts,total})=>`<div class="rowb"${ffa?'':` data-id="${z.id}"`}>
+        <span class="chip" style="--d:${z.color}"></span><span class="name">${z.name}</span>
+        <span class="gain${z.bust?' b':''}">${z.bust?'Bust':'+'+pts}</span>
         <span class="total">${total}</span></div>`).join('')}</div>
-      ${!ffa?'<div class="line">Tap a spot to flip anyone who showed zero fingers.</div>':''}
-      <button id="next">${S.round>=MAX_ROUNDS?'Final scores':'Next round'}</button>`);
+      ${ffa?'':'<div class="line">Tap a name to flip anyone who showed zero fingers.</div>'}
+      <button id="next">${S.round>=MAX_ROUNDS?'Final scores':'Next round'}</button>
+    </div>`,{key:'result',ground:'var(--w)',fg:'var(--k)',paper:true});
   }else if(S.phase==='final'){
+    // game over: the table floods with the winner's colour, growing out of the winner's own spot
     const sorted=[...S.zones].sort((a,b)=>b.score-a.score), top=sorted[0].score;
-    const winners=sorted.filter(z=>z.score===top);
-    setHub(`<div class="eyebrow">Game over · ${MAX_ROUNDS} rounds</div>
-      <div class="huge" style="color:${winners[0].color}">${top}</div>
-      <div class="line">${winners.length>1?winners.map(z=>z.name).join(' & ')+' tie for the win.':winners[0].name+' wins.'}</div>
-      <div class="roster">${sorted.map(z=>`<div style="--c:${z.color}"><span class="who"><span class="dot"></span>${z.name}</span><b>${z.score}</b></div>`).join('')}</div>
-      <button id="newtable">New game</button>`);
+    const winners=sorted.filter(z=>z.score===top), solo=winners.length===1, w=winners[0];
+    tone=solo?w.on:'m';
+    setHub(`<div class="col">
+      <div class="eyebrow">${solo?'Winner':'Tie game'}</div>
+      <div class="champ${solo?'':' tie'}">${winners.map(z=>z.name).join(' &amp; ')}</div>
+      <div class="board final" style="--n:${sorted.length}">${sorted.map(z=>`<div class="rowb">
+        <span class="chip" style="--d:${z.color}"></span><span class="name">${z.name}</span><span></span>
+        <span class="total">${z.score}</span></div>`).join('')}</div>
+      <button id="newtable">New game</button>
+    </div>`,{key:'final',ground:solo?w.color:'var(--m)',fg:solo?INK[w.on]:'var(--w)',ox:solo?w.x+'px':'50%',oy:solo?w.y+'px':'50%'});
   }
-  const showScores=S.phase==='final'; // the recap board carries totals between rounds
-  corner.innerHTML=S.round?`Round <b>${Math.min(S.round,MAX_ROUNDS)}</b> / ${MAX_ROUNDS}`+(showScores?'<br>'+S.zones.map(z=>`<span style="color:${z.color}">${z.name} <b>${z.score}</b></span>`).join(' · '):''):'';
+  corner.textContent=S.round&&S.phase!=='final'?`Round ${Math.min(S.round,MAX_ROUNDS)}/${MAX_ROUNDS}`:'';
 }
-function render(){document.getElementById('count')?.remove();renderHub();renderZones(); // hub first: the lobby keep-out is measured from it
-  pauseBtn.hidden=!['range','count','tap','result'].includes(S.phase)}
+// keep=true (a resize) redraws without tearing down a countdown that is mid-tick
+function render(keep){
+  if(!keep)document.getElementById('count')?.remove();
+  renderHub();renderZones(); // hub first: the lobby keep-out is measured from it
+  pauseBtn.hidden=!['range','count','tap','result'].includes(S.phase);
+  stage.dataset.on=tone;
+}
 
 /* ---------- flow ---------- */
 function startRound(){
@@ -387,17 +482,17 @@ function armIdle(){
   if(S.goads<GOAD_MAX&&!S.goad)S.goadT=setTimeout(()=>{
     if(S.phase!=='tap'||S.ending||Math.random()>GOAD_P)return;
     S.goad=rnd(2,5);S.goads++;
-    const g=document.createElement('div');g.id='goad';
-    g.innerHTML=`<div class="big">+${S.goad}</div><div class="eyebrow">next tap</div>`;
-    stage.appendChild(g);
+    const g=document.createElement('div');g.id='goad';g.className='capsule';
+    g.innerHTML=`<div class="big">+${S.goad}</div><div class="lbl">Next tap</div>`;
+    placeCapsule(g);
     if(navigator.vibrate)navigator.vibrate([20,40,20]);
   },GOAD_MS);
   S.idle=setTimeout(()=>{
     clearGoad();
     S.ending=true;
-    const ov=document.createElement('div');ov.id='count';ov.className='soft';
-    ov.innerHTML=`<div class="huge" id="cd">3</div><div class="eyebrow">Round ending · tap to keep going</div>`;
-    stage.appendChild(ov);
+    const ov=document.createElement('div');ov.id='count';ov.className='soft capsule';
+    ov.innerHTML=`<div class="big" id="cd">3</div><div class="lbl">Round ending<br>Tap to keep going</div>`;
+    placeCapsule(ov);
     let c=3;const tick=()=>{
       if(!S.ending)return;
       const el=document.getElementById('cd');if(!el)return;
@@ -405,6 +500,15 @@ function armIdle(){
       el.textContent=c;el.style.animation='none';void el.offsetWidth;el.style.animation='';
       c--;S.timer=setTimeout(tick,850)};tick();
   },IDLE_MS);
+}
+// capsules drop in under the top bar. if a disc is planted there, they sit just above the middle number instead: that band is always clear
+function placeCapsule(el){
+  stage.appendChild(el);
+  const w=el.offsetWidth,h=el.offsetHeight,x0=stage.clientWidth/2-w/2,y0=el.offsetTop;
+  const hit=S.zones.some(z=>Math.hypot(z.x-Math.max(x0,Math.min(z.x,x0+w)),z.y-Math.max(y0,Math.min(z.y,y0+h)))<75+8);
+  if(!hit)return;
+  el.classList.add('mid');
+  el.style.top=Math.max(8,hub.getBoundingClientRect().top-stage.getBoundingClientRect().top-el.offsetHeight-14)+'px';
 }
 function cancelEnding(){S.ending=false;clearTimeout(S.timer);document.getElementById('count')?.remove()}
 function clearGoad(){S.goad=0;clearTimeout(S.goadT);document.getElementById('goad')?.remove()}
@@ -430,20 +534,21 @@ function tap(z){
   render();
   const el=stage.querySelector(`.zone[data-id="${z.id}"]`);
   if(el){
-    el.querySelector('.big').classList.add('pop');          // number pops on its own layer, so the zone's rotation stays put
+    // the disc and its number spring on their own layers, so the zone's rotation stays put
+    el.querySelector('.face').classList.add('pop');el.querySelector('.big').classList.add('pop');
     const r=document.createElement('div');r.className='ripple';el.appendChild(r);
     r.addEventListener('animationend',()=>r.remove());
     if(bonus){const f=document.createElement('div');f.className='float';f.textContent='+'+bonus;el.appendChild(f);
       f.addEventListener('animationend',()=>f.remove())}
   }
 }
-function endRound(){clearTimeout(S.idle);clearTimeout(S.timer);S.ending=false;S.phase='result';render()}
+function endRound(){clearTimeout(S.idle);clearTimeout(S.timer);S.ending=false;clearGoad();S.phase='result';render()}
 
 /* ---------- pause ---------- */
 const pauseEl=document.getElementById('pause'), pauseBtn=document.getElementById('pauseBtn');
 function pauseGame(){
   if(!['range','count','tap','result'].includes(S.phase))return;
-  clearTimeout(S.timer);clearTimeout(S.idle);cancelEnding();
+  clearTimeout(S.timer);clearTimeout(S.idle);cancelEnding();clearGoad();
   document.getElementById('count')?.remove();
   S.paused=S.phase;pauseEl.hidden=false;
 }
@@ -461,6 +566,8 @@ function endGame(){
   S.phase='final';render();
 }
 pauseBtn.addEventListener('click',pauseGame);
+document.getElementById('resume').addEventListener('click',resumeGame);
+document.getElementById('endgame').addEventListener('click',endGame);
 
 /* ---------- settings ---------- */
 const settingsEl=document.getElementById('settings');
@@ -469,49 +576,56 @@ function renderSettings(){
   document.getElementById('m-hands').classList.toggle('on',S.mode==='hands');
   document.getElementById('b-knock').classList.toggle('on',!S.bustEnds);
   document.getElementById('b-end').classList.toggle('on',S.bustEnds);
-  document.getElementById('bustOpts').hidden=document.getElementById('bustLabel').hidden=S.mode!=='ffa';
+  document.getElementById('bustGroup').hidden=S.mode!=='ffa';
   document.getElementById('modeNote').textContent=S.phase==='lobby'||S.phase==='final'?'':'Takes effect from the next round.';
 }
-function openSettings(){if(['range','count','tap'].includes(S.phase))pauseGame();renderSettings();settingsEl.hidden=false}
+function openSettings(){if(['range','count','tap'].includes(S.phase))pauseGame();renderSettings();settingsEl.scrollTop=0;settingsEl.hidden=false}
 function closeSettings(){settingsEl.hidden=true;if(S.phase==='lobby')render()}
 document.getElementById('settingsBtn').addEventListener('click',openSettings);
 document.getElementById('closeSettings').addEventListener('click',closeSettings);
-settingsEl.addEventListener('click',e=>{if(e.target===settingsEl)closeSettings()});
 document.getElementById('m-ffa').addEventListener('click',()=>{S.mode='ffa';renderSettings()});
 document.getElementById('m-hands').addEventListener('click',()=>{S.mode='hands';renderSettings()});
 document.getElementById('b-knock').addEventListener('click',()=>{S.bustEnds=false;renderSettings()});
 document.getElementById('b-end').addEventListener('click',()=>{S.bustEnds=true;renderSettings()});
-document.getElementById('resume').addEventListener('click',resumeGame);
-document.getElementById('endgame').addEventListener('click',endGame);
 
-/* ---------- bust explosion ---------- */
+/* ---------- rules ---------- */
+const rules=document.getElementById('rules');
+document.getElementById('help').addEventListener('click',()=>{rules.scrollTop=0;rules.hidden=false});
+document.getElementById('closeRules').addEventListener('click',()=>{rules.hidden=true});
+for(const b of document.querySelectorAll('[data-close]'))b.addEventListener('click',()=>{
+  if(b.dataset.close==='rules')rules.hidden=true; else closeSettings();
+});
+
+/* ---------- bust: a black disc bursts out of the busted spot ---------- */
 function explode(z,done,quick){
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const boom=document.createElement('div');boom.id='boom';if(quick)boom.classList.add('quick');
   const cv=document.createElement('canvas');boom.appendChild(cv);
-  const stack=document.createElement('div');stack.className='stack';
-  stack.innerHTML=`<div class="word">Bust</div>`;
-  boom.appendChild(stack);stage.appendChild(boom);
+  const word=document.createElement('div');word.className='word';word.textContent='Bust';
+  boom.appendChild(word);stage.appendChild(boom);
   stage.classList.remove('shake');void stage.offsetWidth;if(!reduce)stage.classList.add('shake');
   const W=cv.width=stage.clientWidth*devicePixelRatio,H=cv.height=stage.clientHeight*devicePixelRatio,dpr=devicePixelRatio;
   const ctx=cv.getContext('2d');
   const ox=z.x*dpr,oy=z.y*dpr, maxR=Math.hypot(W,H);
-  const parts=[];const cols=[z.color,'#111111','#ffd84d','#ffffff','#00bfae'];
-  for(let i=0;i<(reduce?0:(quick?140:260));i++){const a=Math.random()*Math.PI*2,sp=(0.35+Math.random()*1.3)*maxR/60;
-    parts.push({x:ox,y:oy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:(2+Math.random()*6)*dpr,c:cols[i%cols.length],spin:Math.random()*6,life:1})}
-  const t0=performance.now(),DUR=quick?650:1700;
+  const parts=[];const cols=[z.color,'#ffffff','#ffe033','#16bdf2','#ec0a8c']; // dots in the busted player's colour plus paper, yellow, cyan, magenta
+  for(let i=0;i<(reduce?0:(quick?110:220));i++){const a=Math.random()*Math.PI*2,sp=(0.35+Math.random()*1.3)*maxR/60;
+    parts.push({x:ox,y:oy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:(2.5+Math.random()*7)*dpr,c:cols[i%cols.length]})}
+  const t0=performance.now(),DUR=quick?650:1500;
   function frame(t){
     const k=Math.max(0,Math.min(1,(t-t0)/DUR));
     ctx.clearRect(0,0,W,H);
-    // shockwave + red wash that swallows the screen
-    const ring=k*maxR*1.1;
-    ctx.fillStyle=`rgba(255,42,122,${quick?0.75*(1-k):0.97-0.3*k})`;ctx.beginPath();ctx.arc(ox,oy,ring,0,7);ctx.fill();
-    ctx.lineWidth=18*dpr*(1-k);ctx.strokeStyle=`rgba(17,17,17,${1-k})`;ctx.beginPath();ctx.arc(ox,oy,ring*0.9,0,7);ctx.stroke();
-    for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vx*=0.985;p.vy=p.vy*0.985+0.25*dpr;p.spin+=0.2;p.life=1-k;
-      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.spin);ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.c;
-      ctx.fillRect(-p.r,-p.r/2,p.r*2,p.r);ctx.restore()}
+    // the black disc: it swallows the table when the round is over, or flashes and clears when only one player is out
+    const ring=Math.min(1,k*1.7)*maxR*1.05;
+    ctx.fillStyle=`rgba(20,16,18,${quick?0.94:1})`;ctx.beginPath();ctx.arc(ox,oy,ring,0,7);ctx.fill();
+    for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vx*=0.985;p.vy=p.vy*0.985+0.22*dpr;
+      ctx.globalAlpha=Math.max(0,1-k*k);ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill()}
+    ctx.globalAlpha=1;
     if(k<1)requestAnimationFrame(frame);
-    else{boom.classList.add('fade');setTimeout(()=>{boom.remove();if(done)done()},quick?200:450)}
+    else if(quick)boom.remove(); // its own CSS fade has already lifted it
+    else{ // the next screen starts wiping in underneath while the black lifts
+      if(done)done();
+      boom.classList.add('fade');setTimeout(()=>boom.remove(),450);
+    }
   }
   requestAnimationFrame(frame);
 }
@@ -520,27 +634,24 @@ function nextRound(){
     if(!z.sat&&!z.bust)z.score+=S.mode==='ffa'?z.taps+z.bonus:1; // hands: survive = 1 point; free for all: bank your taps
     z.sat=false; // a bust is just a zero round, nobody sits out
   }
-  if(S.round>=MAX_ROUNDS){for(const z of S.zones)z.sat=false;S.phase='final';render();return}
-  if(active().length<2){for(const z of S.zones)z.sat=false} // never leave fewer than two in
+  if(S.round>=MAX_ROUNDS){S.phase='final';render();return}
   startRound();
 }
 function resetGame(){clearTimeout(S.timer);clearTimeout(S.idle);clearGoad();S.ending=false;S.paused=null;S.zones=[];S.round=0;S.count=0;S.bust=0;S.phase='lobby';render()}
-function playAgain(){for(const z of S.zones){z.score=0;z.sat=false;z.bust=false}S.round=0;startRound()}
 
 /* ---------- input ---------- */
-const rules=document.getElementById('rules');
-document.getElementById('help').addEventListener('click',()=>{rules.hidden=false});
-document.getElementById('closeRules').addEventListener('click',()=>{rules.hidden=true});
-rules.addEventListener('click',e=>{if(e.target===rules)rules.hidden=true});
 stage.addEventListener('pointerdown',e=>{
-  if(e.target.closest('button')||e.target.closest('.roster')||e.target.closest('#rules')||e.target.closest('#pause')||e.target.closest('#settings'))return;
+  if(e.target.closest('button,.overlay,#hub.sheet'))return;
   const r=stage.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
   const z=zoneAt(x,y);
   if(S.phase==='lobby'){ if(z){S.zones=S.zones.filter(o=>o!==z)} else addZone(x,y); render(); }
   else if(S.phase==='tap'&&z)tap(z);
-  else if(S.phase==='result'&&z&&S.mode!=='ffa'){z.bust=!z.bust;render()} // hands only: flip a zero-finger player. in free for all a late tap must not cost anyone their round
 });
 hub.addEventListener('click',e=>{
+  // Throw Hands only: tap a name on the score sheet to flip a zero-finger player between bust and safe.
+  // (Free For All rows aren't tappable, so a late tap can never cost anyone their round.)
+  const row=e.target.closest('.rowb[data-id]');
+  if(row&&S.phase==='result'){const z=S.zones.find(o=>String(o.id)===row.dataset.id);if(z){z.bust=!z.bust;render()}return}
   const b=e.target.closest('button');if(!b)return;
   if(b.id==='go')startRound();
   else if(b.id==='clear'){S.zones=[];render()}
@@ -548,7 +659,7 @@ hub.addEventListener('click',e=>{
   else if(b.id==='next')nextRound();
   else if(b.id==='newtable')resetGame();
 });
-window.addEventListener('resize',render);
+window.addEventListener('resize',()=>render(true));
 render();
 </script>
 </body></html>
