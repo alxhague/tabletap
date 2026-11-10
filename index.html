@@ -294,7 +294,7 @@ function renderZones(){
     let big='';
     if(S.phase==='lobby')big='☝';
     else if(z.sat)big='zz';
-    else if(S.phase==='tap')big=z.bust?'✕':(z.taps?String(z.taps):'0');
+    else if(S.phase==='tap')big=z.bust?'✕':String(z.taps+z.bonus); // the disc shows what you'd bank right now, bonus included
     else if(S.phase==='result'||S.phase==='boom')big=z.bust?(S.mode==='ffa'?'0':'✕'):(S.mode==='ffa'?'+'+(z.taps+z.bonus):'+1');
     else big=String(z.score);
     el.innerHTML=`<div class="big">${big}</div>`;
