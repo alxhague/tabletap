@@ -7,36 +7,38 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tap App">
-<meta name="theme-color" content="#652114">
+<meta name="theme-color" content="#17442c">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
 <title>Tap App</title>
 <link rel="preload" href="fonts/jost.woff2" as="font" type="font/woff2" crossorigin>
 <style>@font-face{font-family:'Jost';font-style:normal;font-weight:100 900;font-display:block;src:url(fonts/jost.woff2) format('woff2')}</style>
 <style>
 /* Layout: one field of colour is the table, with a single line of type in the middle and each player's disc wherever
-   their finger landed. Every screen is a pair, one ground and one type colour, the way the studio's own site sets its
-   pages: pink on oxblood for the table, oxblood on pink for the score, black on mint to read, mint on periwinkle to
-   pause, black on orange for "now", pink on red for the bust. One typeface in one weight; scale does the rest. */
+   their finger landed. Every screen is a pair, one ground and one type colour: the table, its inverse for the score,
+   a quiet pair to read, one to pause, one for "now" (count-in, bonus) and one for the bust. Players are pairs too.
+   A colourway (picked in settings) supplies all of them; the values here are the default one. One typeface in one
+   weight; scale does the rest. */
 :root{
-  --oxblood:#652114; --pink:#ff96d9;   /* the table, and its inverse: the score sheet */
-  --rust:#943821;                      /* furniture that sits on the table */
-  --peri:#7f9ad1; --mint:#9dffb2;      /* pause, and a tied game */
-  --orange:#ff8800; --black:#000000;   /* "now": the count-in and the bonus */
-  --red:#ff0000;                       /* the bust */
-  --ground:var(--oxblood); --fg:var(--pink); /* the pair in force; sheets redefine both */
+  --t-ground:#17442c; --t-fg:#d9beff;          /* the table; turned inside out it is the score sheet */
+  --furn:#235c3c;                               /* furniture that sits on the table: the ground's own hue, one step along */
+  --read-ground:#f4eddd; --read-fg:#17442c;     /* rules and settings */
+  --pause-ground:#a9d8ff; --pause-fg:#2b3fd6;   /* pause, and a tied game */
+  --now-ground:#ffe98a; --now-fg:#17442c;       /* "now": the count-in and the bonus */
+  --bust-ground:#ef4a2d; --bust-fg:#ffe98a;     /* the bust */
+  --ground:var(--t-ground); --fg:var(--t-fg);   /* the pair in force; sheets redefine both */
   --display:'Jost','Futura','Century Gothic','Avenir Next',system-ui,sans-serif; /* numerals, wordmark, headlines */
   --text:'Jost','Futura','Century Gothic','Avenir Next',system-ui,sans-serif;    /* labels, buttons, rules */
   --ease:cubic-bezier(.3,0,.15,1);
   --spring:cubic-bezier(.2,1.5,.4,1);
   color-scheme:dark;
 }
-html{background:var(--oxblood)}
+html{background:var(--t-ground)}
 html,body{height:100%}
-body{margin:0;background:var(--oxblood);color:var(--fg);font-family:var(--text);font-weight:400;overflow:hidden;
+body{margin:0;background:var(--t-ground);color:var(--fg);font-family:var(--text);font-weight:400;overflow:hidden;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;
   -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;
   padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px))}
-#stage{position:relative;width:100%;height:100%;touch-action:none;overflow:hidden;background:var(--oxblood)}
+#stage{position:relative;width:100%;height:100%;touch-action:none;overflow:hidden;overflow:clip;background:var(--t-ground)} /* clip: nothing can scroll the table, not even a focus change */
 #defs{position:absolute;width:0;height:0;overflow:hidden}
 
 /* ---------- discs: each player is a pair too, a ground (--d) and the ink that sits on it (--on) ---------- */
@@ -52,12 +54,12 @@ body{margin:0;background:var(--oxblood);color:var(--fg);font-family:var(--text);
 @keyframes pop{from{transform:scale(1.32)}}
 .zone .ripple{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 3px var(--d);animation:ripple .55s var(--ease) forwards}
 @keyframes ripple{from{opacity:.9}to{transform:scale(1.5);opacity:0}}
-.zone.bust .face{background:var(--red);color:var(--pink)}
+.zone.bust .face{background:var(--bust-ground);color:var(--bust-fg)}
 .zone .float{position:absolute;left:50%;top:50%;height:46px;min-width:64px;margin:-23px 0 0 -32px;padding:0 14px;box-sizing:border-box;border-radius:999px;
-  background:var(--orange);color:var(--black);display:grid;place-items:center;font:400 28px/1 var(--display);letter-spacing:-.04em;animation:floatup 1s var(--ease) forwards}
+  background:var(--now-ground);color:var(--now-fg);display:grid;place-items:center;font:400 28px/1 var(--display);letter-spacing:-.04em;animation:floatup 1s var(--ease) forwards}
 @keyframes floatup{from{transform:translateY(-30px) scale(.5);opacity:0}25%{transform:translateY(-84px) scale(1);opacity:1}70%{opacity:1}to{transform:translateY(-124px);opacity:0}}
 
-#keepout{position:absolute;border-radius:40px;box-shadow:inset 0 0 0 2px var(--pink);opacity:0;pointer-events:none;box-sizing:border-box}
+#keepout{position:absolute;border-radius:40px;box-shadow:inset 0 0 0 2px var(--t-fg);opacity:0;pointer-events:none;box-sizing:border-box}
 #keepout.nope{animation:nope .45s var(--ease)}
 @keyframes nope{0%{opacity:.7}25%{transform:translateX(-6px)}60%{transform:translateX(5px)}100%{opacity:0;transform:translateX(0)}}
 
@@ -83,15 +85,16 @@ button{font:400 18px/1 var(--text);letter-spacing:0;height:52px;padding:0 26px;m
   background:var(--fg);color:var(--ground);cursor:pointer;touch-action:manipulation;transition:transform .15s var(--spring);-webkit-tap-highlight-color:transparent}
 button:active{transform:scale(.95)}
 button.ghost{background:rgba(128,128,128,.3);background:color-mix(in srgb,var(--fg) 24%,transparent);color:var(--fg)}
+#hub:not(.sheet) button.ghost{background:var(--furn)} /* on the table itself: the same tone as the corner furniture */
 button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 
-/* ---------- corner furniture: solid rust on the table, so it stays legible when a disc is planted underneath ---------- */
+/* ---------- corner furniture: a solid tone on the table, so it stays legible when a disc is planted underneath ---------- */
 #corner{position:absolute;left:max(16px,env(safe-area-inset-left,0px));top:22px;z-index:2;height:32px;padding:0 14px 0 15px;border-radius:999px;
-  display:flex;align-items:center;background:var(--rust);color:var(--pink);font:400 12px/1 var(--text);letter-spacing:.1em;text-transform:uppercase;
+  display:flex;align-items:center;background:var(--furn);color:var(--t-fg);font:400 12px/1 var(--text);letter-spacing:.1em;text-transform:uppercase;
   white-space:nowrap;pointer-events:none}
 #corner:empty{display:none}
 #ctrl{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:16px;z-index:5;display:flex;gap:8px}
-.cbtn{width:44px;height:44px;padding:0;display:grid;place-items:center;background:var(--rust);color:var(--pink);font:400 20px/1 var(--text)}
+.cbtn{width:44px;height:44px;padding:0;display:grid;place-items:center;background:var(--furn);color:var(--t-fg);font:400 20px/1 var(--text)}
 #stage[data-sheet] .cbtn{background:rgba(128,128,128,.3);background:color-mix(in srgb,var(--fg) 20%,transparent);color:var(--fg)} /* on a sheet: a tint of its type colour */
 
 /* ---------- capsules that drop in under the top bar ---------- */
@@ -102,25 +105,25 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 .capsule .lbl{font:400 12px/1.4 var(--text);letter-spacing:.1em;text-transform:uppercase;text-align:left}
 .capsule.mid{height:60px;padding:0 24px 0 20px}
 .capsule.mid .big{font-size:40px}
-#goad{background:var(--orange);color:var(--black);animation:drop .5s var(--spring) both,nudge 1.1s .5s ease-in-out infinite}
+#goad{background:var(--now-ground);color:var(--now-fg);animation:drop .5s var(--spring) both,nudge 1.1s .5s ease-in-out infinite}
 @keyframes nudge{0%,100%{transform:translateX(-50%) rotate(-1.6deg)}50%{transform:translateX(-50%) rotate(1.6deg)}}
-#count.soft{background:var(--pink);color:var(--oxblood)}
+#count.soft{background:var(--t-fg);color:var(--t-ground)}
 #count.soft #cd{min-width:.6em;text-align:center;animation:tick .45s var(--spring) both}
 @keyframes tick{from{transform:scale(1.6);opacity:0}}
 
 /* ---------- colour takeovers: each one is a disc that grows from its origin to fill the table ---------- */
 @keyframes wipe{from{clip-path:circle(0% at var(--ox,50%) var(--oy,50%))}to{clip-path:circle(142% at var(--ox,50%) var(--oy,50%))}}
 
-/* black on orange: the count-in (Throw Hands) */
+/* the "now" pair: the count-in (Throw Hands) */
 #count:not(.soft){position:absolute;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1vmin;
-  background:var(--orange);color:var(--black);pointer-events:none;animation:wipe .5s var(--ease) both}
+  background:var(--now-ground);color:var(--now-fg);pointer-events:none;animation:wipe .5s var(--ease) both}
 #count:not(.soft) .eyebrow{font-size:clamp(13px,2.6vmin,18px)}
 #count:not(.soft) #cd{font:400 clamp(180px,78vmin,620px)/.84 var(--display);letter-spacing:-.06em;animation:tick .6s var(--spring) both}
 
-/* pink on red: the bust */
+/* the bust pair */
 #boom{position:absolute;inset:0;z-index:30;display:grid;place-items:center;pointer-events:none}
 #boom canvas{position:absolute;inset:0;width:100%;height:100%}
-#boom .word{position:relative;font:400 clamp(96px,38vmin,320px)/.9 var(--display);letter-spacing:-.045em;color:var(--pink);
+#boom .word{position:relative;font:400 clamp(96px,38vmin,320px)/.9 var(--display);letter-spacing:-.045em;color:var(--bust-fg);
   animation:slam .6s var(--spring) both}
 @keyframes slam{from{transform:scale(3.2);opacity:0}}
 #boom.quick{animation:flashout .65s linear both}
@@ -146,7 +149,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 .chip{width:30px;height:30px;border-radius:50%;background:var(--d);box-shadow:inset 0 0 0 1px rgba(128,128,128,.5);box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 30%,transparent)}
 .rowb .name{font:400 19px/1.1 var(--text);text-align:left}
 .rowb .gain{font:400 19px/1 var(--text);opacity:.6;text-align:right}
-.rowb .gain.b{opacity:1;font-size:12px;letter-spacing:.1em;text-transform:uppercase;background:var(--red);color:var(--pink);padding:7px 10px 6px 11px;border-radius:999px}
+.rowb .gain.b{opacity:1;font-size:12px;letter-spacing:.1em;text-transform:uppercase;background:var(--bust-ground);color:var(--bust-fg);padding:7px 10px 6px 11px;border-radius:999px}
 .rowb .total{font:400 clamp(40px,min(22vmin,calc(52vh/var(--n,4))),170px)/.9 var(--display);letter-spacing:-.07em;min-width:1.2em;text-align:right}
 .board.final .total{font-size:clamp(30px,min(10vmin,calc(32vh/var(--n,4))),72px)}
 .board.final .chip{width:26px;height:26px}
@@ -154,12 +157,12 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 .champ{font:400 clamp(60px,23vmin,240px)/.95 var(--display);letter-spacing:-.045em;text-wrap:balance;margin-top:-12px}
 .champ.tie{font-size:clamp(40px,13vmin,130px);line-height:1}
 
-/* ---------- sheets to read: rules and settings in black on mint, pause in mint on periwinkle ---------- */
-.overlay{--ground:var(--mint);--fg:var(--black);position:absolute;inset:0;z-index:20;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;
+/* ---------- sheets to read: rules and settings in the quiet pair, pause in its own ---------- */
+.overlay{--ground:var(--read-ground);--fg:var(--read-fg);position:absolute;inset:0;z-index:20;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;
   background:var(--ground);color:var(--fg);overflow-y:auto;touch-action:pan-y;
   padding-block:min(84px,14vh) 40px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));
   animation:wipe .45s var(--ease) both;--oy:38px}
-#pause{--ground:var(--peri);--fg:var(--mint);--ox:calc(100% - 142px)}
+#pause{--ground:var(--pause-ground);--fg:var(--pause-fg);--ox:calc(100% - 142px)}
 #settings{z-index:21;--ox:calc(100% - 90px)}
 #rules{z-index:22;--ox:calc(100% - 38px)}
 .overlay .col{margin:0 auto;width:min(460px,100%);display:flex;flex-direction:column;gap:28px;text-align:left}
@@ -171,6 +174,14 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 .group{display:flex;flex-direction:column;gap:10px}
 .hint{font:400 15px/1.5 var(--text);opacity:.66;margin:0;text-wrap:pretty}
 .hint:empty{display:none}
+
+.ways{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+button.way{height:96px;border-radius:18px;padding:13px 15px 14px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;
+  background:var(--g);color:var(--f);text-align:left}
+.way .wn{font:400 26px/1 var(--display);letter-spacing:-.035em}
+.way .dots{display:flex;gap:5px}
+.way .dots i{width:17px;height:17px;border-radius:50%}
+button.way.on{outline:2.5px solid var(--fg);outline-offset:3px}
 
 .opts{display:flex;flex-direction:column}
 button.opt{height:auto;width:100%;display:grid;grid-template-columns:1fr auto;column-gap:18px;align-items:center;text-align:left;
@@ -193,6 +204,52 @@ button.opt:active{transform:none;opacity:.55}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
+
+<script>
+/* Colourways. Each supplies the pairs the screens are built from, as [ground, type]:
+     table   the table itself (turned inside out it is the score sheet and the round-ending tag)
+     furn    the tone of the furniture that sits on the table: the ground's own hue, one step along
+     read    rules and settings
+     pause   pause, and a tied game
+     now     the count-in and the bonus tag
+     bust    the bust (never one of the player colours)
+     players eight discs in the order fingers land, each a pair of its own: [name, disc, ink]
+   The first one is the default. */
+const WAYS=[
+  // garden party: lilac on deep moss, candy pastels, each disc inked in one of three colours
+  {id:'moss',name:'Moss',table:['#17442c','#d9beff'],furn:'#235c3c',read:['#f4eddd','#17442c'],pause:['#a9d8ff','#2b3fd6'],now:['#ffe98a','#17442c'],bust:['#ef4a2d','#ffe98a'],
+   players:[['Sky','#a9d8ff','#2b3fd6'],['Butter','#ffe98a','#ef4a2d'],['Pink','#ff9ed2','#17442c'],['Peach','#ffb98a','#2b3fd6'],['Cream','#f4eddd','#ef4a2d'],['Lime','#cde86a','#17442c'],['Blue','#4f66ff','#ffe98a'],['Lilac','#d9beff','#17442c']]},
+  // swimming pool: apricot on ultramarine; every disc's numeral is the table showing through
+  {id:'cobalt',name:'Cobalt',table:['#2331c9','#ffc9a9'],furn:'#3d4bd9',read:['#e3edff','#2331c9'],pause:['#d2bfff','#2331c9'],now:['#ffe45c','#2331c9'],bust:['#f2472b','#ffe45c'],
+   players:[['Mint','#9bf0c0','#2331c9'],['Orange','#ff8b3a','#2331c9'],['White','#ffffff','#2331c9'],['Pink','#ff8fcb','#2331c9'],['Yellow','#ffe45c','#2331c9'],['Sky','#a7dcff','#2331c9'],['Lilac','#d2bfff','#2331c9'],['Peach','#ffc9a9','#2331c9']]},
+  // late night: tangerine on aubergine, sweet-shop brights
+  {id:'fig',name:'Fig',table:['#3b1446','#ff9b52'],furn:'#582668',read:['#e0d0ff','#3b1446'],pause:['#a8f0c8','#3b1446'],now:['#ffe98a','#3b1446'],bust:['#f2452c','#ffe98a'],
+   players:[['Mint','#8ff0c0','#3b1446'],['Pink','#ff8ad0','#3b1446'],['Sky','#9fd6ff','#3b1446'],['Butter','#ffe98a','#3b1446'],['Bone','#f5ecdc','#f2452c'],['Lilac','#c9b2ff','#3b1446'],['Lime','#d6f54a','#3b1446'],['Orange','#ff9b52','#3b1446']]},
+  // seventies lounge: baby blue on chocolate, earthy brights
+  {id:'cocoa',name:'Cocoa',table:['#3b2318','#9fd4ff'],furn:'#5a3829',read:['#f8e9c4','#3b2318'],pause:['#f6a9c6','#3b2318'],now:['#f2b83b','#3b2318'],bust:['#e4472a','#f8e9c4'],
+   players:[['Mustard','#f2b83b','#3b2318'],['Rose','#f6a9c6','#3b2318'],['Sage','#b5d6a7','#3b2318'],['Cream','#f8e9c4','#e4472a'],['Salmon','#ff9478','#3b2318'],['Olive','#a8a03f','#3b2318'],['Lilac','#c9b6f5','#3b2318'],['Sky','#9fd4ff','#3b2318']]},
+  // studio pottery: ice on terracotta, darks and lights together; the one bust that isn't red
+  {id:'clay',name:'Clay',table:['#b5522e','#d9edff'],furn:'#9a4223',read:['#f5efe2','#131a4a'],pause:['#cdb8ff','#131a4a'],now:['#ffe88e','#131a4a'],bust:['#15121a','#ffe88e'],
+   players:[['Bone','#f5efe2','#b5522e'],['Blue','#3550e0','#d9edff'],['Butter','#ffe88e','#131a4a'],['Forest','#1b5e40','#a9efc8'],['Sky','#8ccbff','#131a4a'],['Pink','#ffb3db','#131a4a'],['Lilac','#cdb8ff','#131a4a'],['Mint','#a9efc8','#1b5e40']]},
+  // sunny poster: ultramarine on butter, the one light table; saturated solids
+  {id:'butter',name:'Butter',table:['#ffee9c','#2433cc'],furn:'#ffdb5e',read:['#ffc4e1','#2433cc'],pause:['#b8f2cf','#0e4a33'],now:['#ff8fc8','#2433cc'],bust:['#f0432a','#ffee9c'],
+   players:[['Green','#1f9d62','#ffee9c'],['Orange','#ff8a2b','#4a2a1a'],['Sky','#5fb8ff','#2433cc'],['Pink','#ff8fc8','#2433cc'],['Lilac','#b79cff','#0e4a33'],['Forest','#0e4a33','#b8f2cf'],['Cocoa','#4a2a1a','#ff8fc8'],['Blue','#2433cc','#ffee9c']]},
+];
+let WAY=WAYS[0];
+const P=z=>{const p=WAY.players[z.ci];return {name:p[0],bg:p[1],ink:p[2]}}; // a seat's pair in the colourway in force
+const lum=h=>[1,3,5].reduce((s,i,k)=>{const v=parseInt(h.slice(i,i+2),16)/255;return s+[.2126,.7152,.0722][k]*(v<=.03928?v/12.92:((v+.055)/1.055)**2.4)},0);
+function applyWay(id,save){
+  WAY=WAYS.find(w=>w.id===id)||WAYS[0];
+  const r=document.documentElement.style, set=(k,[g,f])=>{r.setProperty(`--${k}-ground`,g);r.setProperty(`--${k}-fg`,f)};
+  set('t',WAY.table);set('read',WAY.read);set('pause',WAY.pause);set('now',WAY.now);set('bust',WAY.bust);
+  r.setProperty('--furn',WAY.furn);
+  r.setProperty('color-scheme',lum(WAY.table[0])>.4?'light':'dark');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',WAY.table[0]);
+  if(save)try{localStorage.setItem('tapapp.colorway',WAY.id)}catch(e){} // a per-device nicety; the game is fine without it
+}
+// before anything is drawn: the colourway this device last picked, or the default
+{let saved=null;try{saved=localStorage.getItem('tapapp.colorway')}catch(e){} applyWay(saved)}
+</script>
 
 </head>
 <body>
@@ -222,6 +279,10 @@ button.opt:active{transform:none;opacity:.55}
     <div class="col">
       <h2>Settings</h2>
       <div class="group">
+        <div class="eyebrow">Colors</div>
+        <div class="ways" id="ways"></div>
+      </div>
+      <div class="group">
         <div class="eyebrow">Game mode</div>
         <div class="opts">
           <button class="opt" id="m-ffa"><span class="t">Free For All</span><span class="d">Anyone taps any time. Every tap can bust, and the odds only go up. Stop tapping to end the round.</span></button>
@@ -249,7 +310,7 @@ button.opt:active{transform:none;opacity:.55}
         <li><b>Tap whenever you like.</b><span>No turns, no order. Each tap you land is a point.</span></li>
         <li><b>Watch the odds.</b><span>The number in the middle is the chance the next tap busts. It starts tiny and climbs with every tap, at a different pace each round.</span></li>
         <li><b>Bank or bust.</b><span>Bust and you get zero for the round and sit out the rest of it while everyone else keeps going.</span></li>
-        <li><b>Bonus taps.</b><span>Now and then an orange tag drops in: the next tap is worth that many points instead of one. Same bust odds as any other tap.</span></li>
+        <li><b>Bonus taps.</b><span>Now and then a tag drops in with a number on it: the next tap is worth that many points instead of one. Same bust odds as any other tap.</span></li>
         <li><b>Quiet ends it.</b><span>If nobody taps for 10 seconds, a 3-2-1 runs. Tap to keep going, or let it finish and everyone banks.</span></li>
         <li><b>Win.</b><span>Most points after 10 rounds.</span></li>
       </ol>
@@ -272,13 +333,6 @@ button.opt:active{transform:none;opacity:.55}
 </div>
 
 <script>
-/* Players, in the order fingers land. Each is a pair: the disc's colour and the ink that sits on it.
-   Neither red nor oxblood is ever a player: red is the bust, oxblood is the table. */
-const PLAYERS=[
-  {name:'Blue',  bg:'#7f9ad1',ink:'#9dffb2'},{name:'Orange',bg:'#ff8800',ink:'#000000'},
-  {name:'Mint',  bg:'#9dffb2',ink:'#000000'},{name:'Yellow',bg:'#fff57d',ink:'#943821'},
-  {name:'Grey',  bg:'#e1e1df',ink:'#ff0000'},{name:'White', bg:'#ffffff',ink:'#652114'},
-  {name:'Taupe', bg:'#918576',ink:'#fff57d'},{name:'Pink',  bg:'#ff96d9',ink:'#652114'}];
 const R=105; // tap hit radius px, wider than the disc so a slightly-off finger still counts
 const MAX_ROUNDS=10;
 const stage=document.getElementById('stage'), hub=document.getElementById('hub'), corner=document.getElementById('corner');
@@ -335,10 +389,9 @@ function addZone(x,y){
     if(navigator.vibrate)navigator.vibrate([30,30,30]);
     return;
   }
-  const used=new Set(S.zones.map(z=>z.ci));let ci=0;while(used.has(ci)&&ci<PLAYERS.length)ci++;
-  if(ci>=PLAYERS.length)return;
-  const p=PLAYERS[ci];
-  S.zones.push({id:Date.now()+Math.random(),x,y,ci,color:p.bg,ink:p.ink,name:p.name,taps:0,bonus:0,went:false,bust:false,sat:false,score:0,fresh:true});
+  const used=new Set(S.zones.map(z=>z.ci));let ci=0;while(used.has(ci)&&ci<WAY.players.length)ci++;
+  if(ci>=WAY.players.length)return;
+  S.zones.push({id:Date.now()+Math.random(),x,y,ci,taps:0,bonus:0,went:false,bust:false,sat:false,score:0,fresh:true});
 }
 function renderZones(){
   for(const el of stage.querySelectorAll('.zone,#keepout'))el.remove();
@@ -353,7 +406,7 @@ function renderZones(){
     z.fresh=false;
     // each disc is turned to face its own seat: numerals read upright from there, and the manicule points out at its player
     const ang=Math.atan2(z.y-cy(),z.x-cx())*180/Math.PI-90;
-    el.style.cssText=`left:${z.x}px;top:${z.y}px;transform:translate(-50%,-50%) rotate(${ang}deg);--d:${z.color};--on:${z.ink}`;
+    el.style.cssText=`left:${z.x}px;top:${z.y}px;transform:translate(-50%,-50%) rotate(${ang}deg);--d:${P(z).bg};--on:${P(z).ink}`;
     let inner;
     if(S.phase==='lobby')inner='<svg class="hand" viewBox="0 0 609 1146" aria-hidden="true"><use href="#manicule"/></svg>'; // "this spot is yours"
     else{
@@ -418,24 +471,24 @@ function renderHub(){
     setHub(`<div class="col">
       <div class="eyebrow">Round ${S.round} of ${MAX_ROUNDS}</div>
       <div class="board" style="--n:${rows.length}">${rows.map(({z,pts,total})=>`<div class="rowb"${ffa?'':` data-id="${z.id}"`}>
-        <span class="chip" style="--d:${z.color}"></span><span class="name">${z.name}</span>
+        <span class="chip" style="--d:${P(z).bg}"></span><span class="name">${P(z).name}</span>
         <span class="gain${z.bust?' b':''}">${z.bust?'Bust':'+'+pts}</span>
         <span class="total">${total}</span></div>`).join('')}</div>
       ${ffa?'':'<div class="line">Tap a name to flip anyone who showed zero fingers.</div>'}
       <button id="next">${S.round>=MAX_ROUNDS?'Final scores':'Next round'}</button>
-    </div>`,{key:'result',ground:'var(--pink)',fg:'var(--oxblood)'});
+    </div>`,{key:'result',ground:'var(--t-fg)',fg:'var(--t-ground)'});
   }else if(S.phase==='final'){
     // game over: the table floods with the winner's own pair, growing out of the winner's spot
     const sorted=[...S.zones].sort((a,b)=>b.score-a.score), top=sorted[0].score;
     const winners=sorted.filter(z=>z.score===top), solo=winners.length===1, w=winners[0];
     setHub(`<div class="col">
       <div class="eyebrow">${solo?'Winner':'Tie game'}</div>
-      <div class="champ${solo?'':' tie'}">${winners.map(z=>z.name).join(' &amp; ')}</div>
+      <div class="champ${solo?'':' tie'}">${winners.map(z=>P(z).name).join(' &amp; ')}</div>
       <div class="board final" style="--n:${sorted.length}">${sorted.map(z=>`<div class="rowb">
-        <span class="chip" style="--d:${z.color}"></span><span class="name">${z.name}</span><span></span>
+        <span class="chip" style="--d:${P(z).bg}"></span><span class="name">${P(z).name}</span><span></span>
         <span class="total">${z.score}</span></div>`).join('')}</div>
       <button id="newtable">New game</button>
-    </div>`,{key:'final',ground:solo?w.color:'var(--peri)',fg:solo?w.ink:'var(--mint)',ox:solo?w.x+'px':'50%',oy:solo?w.y+'px':'50%'});
+    </div>`,{key:'final',ground:solo?P(w).bg:'var(--pause-ground)',fg:solo?P(w).ink:'var(--pause-fg)',ox:solo?w.x+'px':'50%',oy:solo?w.y+'px':'50%'});
   }
   corner.textContent=S.round&&S.phase!=='final'?`Round ${Math.min(S.round,MAX_ROUNDS)}/${MAX_ROUNDS}`:'';
 }
@@ -560,6 +613,8 @@ document.getElementById('endgame').addEventListener('click',endGame);
 /* ---------- settings ---------- */
 const settingsEl=document.getElementById('settings');
 function renderSettings(){
+  document.getElementById('ways').innerHTML=WAYS.map(w=>`<button class="way${w===WAY?' on':''}" data-way="${w.id}" aria-pressed="${w===WAY}" style="--g:${w.table[0]};--f:${w.table[1]}">
+    <span class="wn">${w.name}</span><span class="dots">${w.players.slice(0,5).map(p=>`<i style="background:${p[1]}"></i>`).join('')}</span></button>`).join('');
   document.getElementById('m-ffa').classList.toggle('on',S.mode==='ffa');
   document.getElementById('m-hands').classList.toggle('on',S.mode==='hands');
   document.getElementById('b-knock').classList.toggle('on',!S.bustEnds);
@@ -571,6 +626,10 @@ function openSettings(){if(['range','count','tap'].includes(S.phase))pauseGame()
 function closeSettings(){settingsEl.hidden=true;if(S.phase==='lobby')render()}
 document.getElementById('settingsBtn').addEventListener('click',openSettings);
 document.getElementById('closeSettings').addEventListener('click',closeSettings);
+document.getElementById('ways').addEventListener('click',e=>{
+  const b=e.target.closest('[data-way]');if(!b)return;
+  applyWay(b.dataset.way,true);renderSettings();render(true); // colours change at once, mid-game included; seats keep their order
+});
 document.getElementById('m-ffa').addEventListener('click',()=>{S.mode='ffa';renderSettings()});
 document.getElementById('m-hands').addEventListener('click',()=>{S.mode='hands';renderSettings()});
 document.getElementById('b-knock').addEventListener('click',()=>{S.bustEnds=false;renderSettings()});
@@ -584,7 +643,7 @@ for(const b of document.querySelectorAll('[data-close]'))b.addEventListener('cli
   if(b.dataset.close==='rules')rules.hidden=true; else closeSettings();
 });
 
-/* ---------- bust: a red disc bursts out of the busted spot ---------- */
+/* ---------- bust: a disc of the bust colour bursts out of the busted spot ---------- */
 function explode(z,done,quick){
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const boom=document.createElement('div');boom.id='boom';if(quick)boom.classList.add('quick');
@@ -595,22 +654,22 @@ function explode(z,done,quick){
   const W=cv.width=stage.clientWidth*devicePixelRatio,H=cv.height=stage.clientHeight*devicePixelRatio,dpr=devicePixelRatio;
   const ctx=cv.getContext('2d');
   const ox=z.x*dpr,oy=z.y*dpr, maxR=Math.hypot(W,H);
-  const parts=[];const cols=[z.color,'#ff96d9','#652114','#ff96d9','#ffffff']; // dots: the busted player's colour among pink, oxblood and white
+  const parts=[];const cols=[P(z).bg,WAY.bust[1],WAY.table[0],WAY.table[1],WAY.bust[1]]; // dots: the busted player's colour among the table's pair and the bust's type colour
   for(let i=0;i<(reduce?0:(quick?110:220));i++){const a=Math.random()*Math.PI*2,sp=(0.35+Math.random()*1.3)*maxR/60;
     parts.push({x:ox,y:oy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:(2.5+Math.random()*7)*dpr,c:cols[i%cols.length]})}
   const t0=performance.now(),DUR=quick?650:1500;
   function frame(t){
     const k=Math.max(0,Math.min(1,(t-t0)/DUR));
     ctx.clearRect(0,0,W,H);
-    // the red disc: it swallows the table when the round is over, or flashes and clears when only one player is out
+    // the disc: it swallows the table when the round is over, or flashes and clears when only one player is out
     const ring=Math.min(1,k*1.7)*maxR*1.05;
-    ctx.fillStyle=`rgba(255,0,0,${quick?0.94:1})`;ctx.beginPath();ctx.arc(ox,oy,ring,0,7);ctx.fill();
+    ctx.globalAlpha=quick?0.94:1;ctx.fillStyle=WAY.bust[0];ctx.beginPath();ctx.arc(ox,oy,ring,0,7);ctx.fill();
     for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vx*=0.985;p.vy=p.vy*0.985+0.22*dpr;
       ctx.globalAlpha=Math.max(0,1-k*k);ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill()}
     ctx.globalAlpha=1;
     if(k<1)requestAnimationFrame(frame);
     else if(quick)boom.remove(); // its own CSS fade has already lifted it
-    else{ // the next screen starts wiping in underneath while the red lifts
+    else{ // the next screen starts wiping in underneath while the bust colour lifts
       if(done)done();
       boom.classList.add('fade');setTimeout(()=>boom.remove(),450);
     }
