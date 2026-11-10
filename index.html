@@ -7,216 +7,207 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tap App">
-<meta name="theme-color" content="#ec0a8c">
+<meta name="theme-color" content="#652114">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
 <title>Tap App</title>
 <link rel="preload" href="fonts/jost.woff2" as="font" type="font/woff2" crossorigin>
 <style>@font-face{font-family:'Jost';font-style:normal;font-weight:100 900;font-display:block;src:url(fonts/jost.woff2) format('woff2')}</style>
 <style>
-/* Layout: one flat field of magenta is the table. A single geometric sans, set in white, carries the state of the
-   game in the middle; players are flat discs of colour where their fingers landed. Every other screen arrives as a
-   disc of colour growing to fill the table: cyan counts you in, yellow dangles a bonus, black is the bust, white keeps score. */
+/* Layout: one field of colour is the table, with a single line of type in the middle and each player's disc wherever
+   their finger landed. Every screen is a pair, one ground and one type colour, the way the studio's own site sets its
+   pages: pink on oxblood for the table, oxblood on pink for the score, black on mint to read, mint on periwinkle to
+   pause, black on orange for "now", pink on red for the bust. One typeface in one weight; scale does the rest. */
 :root{
-  --m:#ec0a8c;                    /* magenta: the table */
-  --c:#16bdf2;                    /* cyan: the count-in */
-  --y:#ffe033;                    /* yellow: the bonus */
-  --k:#141012;                    /* key: ink, and the bust */
-  --w:#ffffff;                    /* paper: type on colour, the score sheet */
-  --w-soft:rgba(255,255,255,.88); /* running text on colour */
-  --k-soft:rgba(20,16,18,.62);    /* running text on paper */
-  --k-hair:rgba(20,16,18,.14);    /* hairlines on paper */
+  --oxblood:#652114; --pink:#ff96d9;   /* the table, and its inverse: the score sheet */
+  --rust:#943821;                      /* furniture that sits on the table */
+  --peri:#7f9ad1; --mint:#9dffb2;      /* pause, and a tied game */
+  --orange:#ff8800; --black:#000000;   /* "now": the count-in and the bonus */
+  --red:#ff0000;                       /* the bust */
+  --ground:var(--oxblood); --fg:var(--pink); /* the pair in force; sheets redefine both */
   --display:'Jost','Futura','Century Gothic','Avenir Next',system-ui,sans-serif; /* numerals, wordmark, headlines */
   --text:'Jost','Futura','Century Gothic','Avenir Next',system-ui,sans-serif;    /* labels, buttons, rules */
   --ease:cubic-bezier(.3,0,.15,1);
   --spring:cubic-bezier(.2,1.5,.4,1);
-  color-scheme:light;
+  color-scheme:dark;
 }
-html{background:var(--m)}
+html{background:var(--oxblood)}
 html,body{height:100%}
-body{margin:0;background:var(--m);color:var(--w);font-family:var(--text);overflow:hidden;
+body{margin:0;background:var(--oxblood);color:var(--fg);font-family:var(--text);font-weight:400;overflow:hidden;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;
   -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;
   padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px))}
-#stage{position:relative;width:100%;height:100%;touch-action:none;overflow:hidden;background:var(--m)}
+#stage{position:relative;width:100%;height:100%;touch-action:none;overflow:hidden;background:var(--oxblood)}
+#defs{position:absolute;width:0;height:0;overflow:hidden}
 
-/* ---------- discs ---------- */
+/* ---------- discs: each player is a pair too, a ground (--d) and the ink that sits on it (--on) ---------- */
 .zone{position:absolute;left:0;top:0;width:150px;height:150px;z-index:1;pointer-events:none}
 .zone .face{position:absolute;inset:0;border-radius:50%;background:var(--d);color:var(--on);display:grid;place-items:center}
-.zone .big{font:500 68px/1 var(--display);letter-spacing:-.04em}
+.zone .big{font:400 70px/1 var(--display);letter-spacing:-.06em}
+.zone .hand{display:block;height:98px;width:auto;fill:currentColor;transform:translateY(5px)}
 .zone.fresh .face{animation:land .45s var(--spring) both}
 @keyframes land{from{transform:scale(0)}}
 .zone .face.pop{animation:press .3s var(--spring)}
 @keyframes press{from{transform:scale(.9)}}
 .zone .big.pop{animation:pop .3s var(--spring)}
 @keyframes pop{from{transform:scale(1.32)}}
-.zone .ripple{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 3px var(--w);animation:ripple .55s var(--ease) forwards}
+.zone .ripple{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 3px var(--d);animation:ripple .55s var(--ease) forwards}
 @keyframes ripple{from{opacity:.9}to{transform:scale(1.5);opacity:0}}
-.zone.bust .face{background:var(--k);color:var(--w)}
+.zone.bust .face{background:var(--red);color:var(--pink)}
 .zone .float{position:absolute;left:50%;top:50%;height:46px;min-width:64px;margin:-23px 0 0 -32px;padding:0 14px;box-sizing:border-box;border-radius:999px;
-  background:var(--y);color:var(--k);display:grid;place-items:center;font:500 28px/1 var(--display);letter-spacing:-.02em;animation:floatup 1s var(--ease) forwards}
+  background:var(--orange);color:var(--black);display:grid;place-items:center;font:400 28px/1 var(--display);letter-spacing:-.04em;animation:floatup 1s var(--ease) forwards}
 @keyframes floatup{from{transform:translateY(-30px) scale(.5);opacity:0}25%{transform:translateY(-84px) scale(1);opacity:1}70%{opacity:1}to{transform:translateY(-124px);opacity:0}}
 
-/* empty table: faint rings where fingers might go */
-.ring{position:absolute;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--w);opacity:.28;
-  pointer-events:none;animation:breathe 2.6s ease-in-out infinite}
-@keyframes breathe{50%{opacity:.6;transform:scale(1.05)}}
-#keepout{position:absolute;border-radius:40px;box-shadow:inset 0 0 0 2px var(--w);opacity:0;pointer-events:none;box-sizing:border-box}
+#keepout{position:absolute;border-radius:40px;box-shadow:inset 0 0 0 2px var(--pink);opacity:0;pointer-events:none;box-sizing:border-box}
 #keepout.nope{animation:nope .45s var(--ease)}
-@keyframes nope{0%{opacity:.75}25%{transform:translateX(-6px)}60%{transform:translateX(5px)}100%{opacity:0;transform:translateX(0)}}
+@keyframes nope{0%{opacity:.7}25%{transform:translateX(-6px)}60%{transform:translateX(5px)}100%{opacity:0;transform:translateX(0)}}
 
 /* ---------- the middle of the table ---------- */
 #hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;width:min(340px,84vw);
   display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;pointer-events:none}
 #hub button{pointer-events:auto} /* only controls catch taps; type in the middle lets taps fall through to the discs beneath */
-.eyebrow{font:500 12px/1.3 var(--text);letter-spacing:.18em;text-transform:uppercase;color:var(--w)}
-.line{font:400 16px/1.4 var(--text);color:var(--w-soft);text-wrap:balance;max-width:27ch}
-.line b{font-weight:500;color:var(--w)}
-.mark{font:500 clamp(84px,min(27vw,17.5vh),230px)/.84 var(--display);letter-spacing:-.02em;text-transform:uppercase;color:var(--w);margin:0 0 .06em}
-.readout{display:flex;align-items:flex-start;justify-content:center;white-space:nowrap;color:var(--w);
-  font:500 clamp(72px,calc((22 + 14*var(--s,0))*1vmin),300px)/.86 var(--display);letter-spacing:-.05em}
-.readout i{font-style:normal;font-size:.4em;line-height:1;margin:.15em 0 0 .1em;letter-spacing:0}
-.readout.xl{font-size:clamp(120px,48vmin,340px)}
+.eyebrow{font:400 13px/1.3 var(--text);letter-spacing:.1em;text-transform:uppercase}
+.line{font:400 17px/1.4 var(--text);opacity:.86;text-wrap:balance;max-width:27ch}
+.mark{font:400 clamp(64px,min(22vw,17vh),200px)/.95 var(--display);letter-spacing:-.035em;white-space:nowrap;margin:0 0 .04em}
+.readout{display:flex;align-items:flex-start;justify-content:center;white-space:nowrap;
+  font:400 clamp(84px,calc((24 + 10*var(--s,0))*1vmin),280px)/.86 var(--display);letter-spacing:-.07em}
+.readout i{font-style:normal;font-size:.4em;line-height:1;margin:.14em 0 0 .16em;letter-spacing:0}
+.readout.xl{font-size:clamp(120px,44vmin,320px)}
 .readout.bump{animation:bump .28s var(--spring)}
 @keyframes bump{from{transform:scale(1.08)}}
 .readout.enter{animation:enter .5s var(--spring) both}
 @keyframes enter{from{transform:scale(.55);opacity:0}}
-.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;min-height:54px}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;min-height:52px}
 
-button{font:500 15px/1 var(--text);letter-spacing:.14em;text-transform:uppercase;height:54px;padding:0 30px;margin:0;border:0;border-radius:999px;
-  background:var(--w);color:var(--m);cursor:pointer;touch-action:manipulation;transition:transform .15s var(--spring);-webkit-tap-highlight-color:transparent}
+/* pills: the type colour as a solid, or as a tint of itself */
+button{font:400 18px/1 var(--text);letter-spacing:0;height:52px;padding:0 26px;margin:0;border:0;border-radius:999px;
+  background:var(--fg);color:var(--ground);cursor:pointer;touch-action:manipulation;transition:transform .15s var(--spring);-webkit-tap-highlight-color:transparent}
 button:active{transform:scale(.95)}
-button.ghost{background:transparent;color:var(--w);box-shadow:inset 0 0 0 1.5px currentColor}
-button:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+button.ghost{background:rgba(128,128,128,.3);background:color-mix(in srgb,var(--fg) 24%,transparent);color:var(--fg)}
+button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 
-/* ---------- corner furniture ---------- */
-/* solid paper, so it stays legible when a disc is planted underneath */
+/* ---------- corner furniture: solid rust on the table, so it stays legible when a disc is planted underneath ---------- */
 #corner{position:absolute;left:max(16px,env(safe-area-inset-left,0px));top:22px;z-index:2;height:32px;padding:0 14px 0 15px;border-radius:999px;
-  display:flex;align-items:center;background:var(--w);color:var(--m);font:500 12px/1 var(--text);letter-spacing:.16em;text-transform:uppercase;
+  display:flex;align-items:center;background:var(--rust);color:var(--pink);font:400 12px/1 var(--text);letter-spacing:.1em;text-transform:uppercase;
   white-space:nowrap;pointer-events:none}
 #corner:empty{display:none}
 #ctrl{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:16px;z-index:5;display:flex;gap:8px}
-.cbtn{width:44px;height:44px;padding:0;display:grid;place-items:center;background:var(--w);color:var(--m);
-  font:500 20px/1 var(--text);letter-spacing:0;text-transform:none}
-#stage[data-on="k"] .cbtn{background:rgba(20,16,18,.08);color:var(--k)} /* on a light sheet */
-#stage[data-on="w"] .cbtn{color:var(--k)}                                /* on a dark sheet */
+.cbtn{width:44px;height:44px;padding:0;display:grid;place-items:center;background:var(--rust);color:var(--pink);font:400 20px/1 var(--text)}
+#stage[data-sheet] .cbtn{background:rgba(128,128,128,.3);background:color-mix(in srgb,var(--fg) 20%,transparent);color:var(--fg)} /* on a sheet: a tint of its type colour */
 
 /* ---------- capsules that drop in under the top bar ---------- */
 .capsule{position:absolute;left:50%;top:74px;transform:translateX(-50%);z-index:6;pointer-events:none;display:flex;align-items:center;gap:14px;
   height:72px;padding:0 28px 0 24px;border-radius:999px;white-space:nowrap;animation:drop .5s var(--spring) both}
 @keyframes drop{from{transform:translate(-50%,-150%) scale(.7);opacity:0}}
-.capsule .big{font:500 46px/1 var(--display);letter-spacing:-.04em}
+.capsule .big{font:400 48px/1 var(--display);letter-spacing:-.06em}
+.capsule .lbl{font:400 12px/1.4 var(--text);letter-spacing:.1em;text-transform:uppercase;text-align:left}
 .capsule.mid{height:60px;padding:0 24px 0 20px}
-.capsule.mid .big{font-size:38px}
-.capsule .lbl{font:500 12px/1.4 var(--text);letter-spacing:.16em;text-transform:uppercase;text-align:left}
-#goad{background:var(--y);color:var(--k);animation:drop .5s var(--spring) both,nudge 1.1s .5s ease-in-out infinite}
+.capsule.mid .big{font-size:40px}
+#goad{background:var(--orange);color:var(--black);animation:drop .5s var(--spring) both,nudge 1.1s .5s ease-in-out infinite}
 @keyframes nudge{0%,100%{transform:translateX(-50%) rotate(-1.6deg)}50%{transform:translateX(-50%) rotate(1.6deg)}}
-#count.soft{background:var(--w);color:var(--k)}
-#count.soft #cd{color:var(--m);min-width:.6em;text-align:center;animation:tick .45s var(--spring) both}
+#count.soft{background:var(--pink);color:var(--oxblood)}
+#count.soft #cd{min-width:.6em;text-align:center;animation:tick .45s var(--spring) both}
 @keyframes tick{from{transform:scale(1.6);opacity:0}}
 
 /* ---------- colour takeovers: each one is a disc that grows from its origin to fill the table ---------- */
 @keyframes wipe{from{clip-path:circle(0% at var(--ox,50%) var(--oy,50%))}to{clip-path:circle(142% at var(--ox,50%) var(--oy,50%))}}
 
-/* cyan: the count-in (Throw Hands) */
+/* black on orange: the count-in (Throw Hands) */
 #count:not(.soft){position:absolute;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1vmin;
-  background:var(--c);color:var(--k);pointer-events:none;animation:wipe .5s var(--ease) both}
-#count:not(.soft) .eyebrow{color:var(--k);font-size:clamp(12px,2.6vmin,18px)}
-#count:not(.soft) #cd{font:500 clamp(180px,78vmin,620px)/.84 var(--display);letter-spacing:-.05em;animation:tick .6s var(--spring) both}
+  background:var(--orange);color:var(--black);pointer-events:none;animation:wipe .5s var(--ease) both}
+#count:not(.soft) .eyebrow{font-size:clamp(13px,2.6vmin,18px)}
+#count:not(.soft) #cd{font:400 clamp(180px,78vmin,620px)/.84 var(--display);letter-spacing:-.06em;animation:tick .6s var(--spring) both}
 
-/* black: the bust */
+/* pink on red: the bust */
 #boom{position:absolute;inset:0;z-index:30;display:grid;place-items:center;pointer-events:none}
 #boom canvas{position:absolute;inset:0;width:100%;height:100%}
-#boom .word{position:relative;font:600 clamp(96px,36vmin,300px)/.84 var(--display);letter-spacing:-.035em;text-transform:uppercase;color:var(--w);
+#boom .word{position:relative;font:400 clamp(96px,38vmin,320px)/.9 var(--display);letter-spacing:-.045em;color:var(--pink);
   animation:slam .6s var(--spring) both}
 @keyframes slam{from{transform:scale(3.2);opacity:0}}
 #boom.quick{animation:flashout .65s linear both}
-#boom.quick .word{font-size:clamp(72px,25vmin,190px);animation-duration:.3s}
+#boom.quick .word{font-size:clamp(72px,26vmin,200px);animation-duration:.3s}
 @keyframes flashout{0%,55%{opacity:1}100%{opacity:0}}
 #boom.fade{animation:boomout .45s ease-in forwards}
 @keyframes boomout{to{opacity:0}}
 .shake{animation:shake .5s linear}
 @keyframes shake{10%,90%{transform:translate(-2px,1px)}20%,80%{transform:translate(4px,-2px)}30%,50%,70%{transform:translate(-7px,3px)}40%,60%{transform:translate(7px,-3px)}}
 
-/* white (between rounds) or the winner's colour (game over): the middle becomes a full sheet */
+/* between rounds, and at game over, the middle becomes a full sheet in its own pair */
 #hub.sheet{left:0;top:0;width:100%;height:100%;transform:none;z-index:3;box-sizing:border-box;gap:0;pointer-events:auto;
   background:var(--ground);color:var(--fg);overflow-y:auto;touch-action:pan-y;
   padding-block:min(76px,12vh) 32px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));
   animation:wipe .5s var(--ease) both}
 #hub.sheet .col{margin:auto;width:min(520px,100%);display:flex;flex-direction:column;align-items:center;gap:24px}
-.sheet .eyebrow{color:inherit}
-.sheet .line{color:inherit;opacity:.72}
-.sheet button{background:var(--fg);color:var(--ground)}
-.paper .eyebrow{color:var(--m)}
-.paper .line{color:var(--k-soft);opacity:1}
-.paper button{background:var(--m);color:var(--w)}
-.paper button.ghost{background:transparent;color:var(--k)}
 
 .board{width:100%;display:flex;flex-direction:column}
 .rowb{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;column-gap:14px;padding:9px 2px;
-  border-top:1px solid rgba(128,128,128,.35);border-top:1px solid color-mix(in srgb,currentColor 16%,transparent)}
-.rowb:last-child{border-bottom:1px solid rgba(128,128,128,.35);border-bottom:1px solid color-mix(in srgb,currentColor 16%,transparent)}
+  border-top:1px solid rgba(128,128,128,.4);border-top:1px solid color-mix(in srgb,currentColor 22%,transparent)}
+.rowb:last-child{border-bottom:1px solid rgba(128,128,128,.4);border-bottom:1px solid color-mix(in srgb,currentColor 22%,transparent)}
 .rowb[data-id]{cursor:pointer}
-.chip{width:30px;height:30px;border-radius:50%;background:var(--d);box-shadow:inset 0 0 0 1px rgba(128,128,128,.45);box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 24%,transparent)}
-.rowb .name{font:500 13px/1 var(--text);letter-spacing:.16em;text-transform:uppercase;text-align:left}
-.rowb .gain{font:500 16px/1 var(--text);letter-spacing:.04em;color:var(--m);text-align:right}
-.rowb .gain.b{font-size:11px;letter-spacing:.16em;text-transform:uppercase;background:var(--k);color:var(--w);padding:6px 9px 5px 10px;border-radius:999px}
-.rowb .total{font:500 clamp(40px,min(22vmin,calc(52vh/var(--n,4))),170px)/.9 var(--display);letter-spacing:-.045em;min-width:1.2em;text-align:right}
+.chip{width:30px;height:30px;border-radius:50%;background:var(--d);box-shadow:inset 0 0 0 1px rgba(128,128,128,.5);box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 30%,transparent)}
+.rowb .name{font:400 19px/1.1 var(--text);text-align:left}
+.rowb .gain{font:400 19px/1 var(--text);opacity:.6;text-align:right}
+.rowb .gain.b{opacity:1;font-size:12px;letter-spacing:.1em;text-transform:uppercase;background:var(--red);color:var(--pink);padding:7px 10px 6px 11px;border-radius:999px}
+.rowb .total{font:400 clamp(40px,min(22vmin,calc(52vh/var(--n,4))),170px)/.9 var(--display);letter-spacing:-.07em;min-width:1.2em;text-align:right}
 .board.final .total{font-size:clamp(30px,min(10vmin,calc(32vh/var(--n,4))),72px)}
 .board.final .chip{width:26px;height:26px}
 .board.final .rowb{padding-block:7px}
-.champ{font:500 clamp(60px,21vmin,220px)/.86 var(--display);letter-spacing:-.035em;text-transform:uppercase;text-wrap:balance;margin-top:-10px}
-.champ.tie{font-size:clamp(40px,12vmin,120px);line-height:.92}
+.champ{font:400 clamp(60px,23vmin,240px)/.95 var(--display);letter-spacing:-.045em;text-wrap:balance;margin-top:-12px}
+.champ.tie{font-size:clamp(40px,13vmin,130px);line-height:1}
 
-/* ---------- paper sheets: rules, settings, pause ---------- */
-.overlay{position:absolute;inset:0;z-index:20;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;
-  background:var(--w);color:var(--k);overflow-y:auto;touch-action:pan-y;
+/* ---------- sheets to read: rules and settings in black on mint, pause in mint on periwinkle ---------- */
+.overlay{--ground:var(--mint);--fg:var(--black);position:absolute;inset:0;z-index:20;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;
+  background:var(--ground);color:var(--fg);overflow-y:auto;touch-action:pan-y;
   padding-block:min(84px,14vh) 40px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));
   animation:wipe .45s var(--ease) both;--oy:38px}
-#pause{--ox:calc(100% - 142px)}
+#pause{--ground:var(--peri);--fg:var(--mint);--ox:calc(100% - 142px)}
 #settings{z-index:21;--ox:calc(100% - 90px)}
 #rules{z-index:22;--ox:calc(100% - 38px)}
-.overlay .col{margin:0 auto;width:min(460px,100%);display:flex;flex-direction:column;gap:26px;text-align:left}
+.overlay .col{margin:0 auto;width:min(460px,100%);display:flex;flex-direction:column;gap:28px;text-align:left}
 .overlay .col.center{margin:auto;align-items:center;text-align:center}
-.overlay .x{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:16px;background:rgba(20,16,18,.08);color:var(--k)}
-.overlay h2{margin:0;font:500 clamp(44px,12vmin,72px)/.9 var(--display);letter-spacing:-.035em}
-.overlay .col>button{align-self:flex-start}
+.overlay .x{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:16px;background:rgba(128,128,128,.3);background:color-mix(in srgb,var(--fg) 16%,transparent);color:var(--fg)}
+.overlay h2{margin:0;font:400 clamp(44px,12vmin,76px)/1 var(--display);letter-spacing:-.04em;text-align:center;text-wrap:balance}
+.overlay .col>button{align-self:center}
 .stack{display:flex;flex-direction:column;gap:10px;width:min(280px,100%)}
-.group{display:flex;flex-direction:column;gap:8px}
-.hint{font:400 14px/1.5 var(--text);color:var(--k-soft);margin:0;text-wrap:pretty}
+.group{display:flex;flex-direction:column;gap:10px}
+.hint{font:400 15px/1.5 var(--text);opacity:.66;margin:0;text-wrap:pretty}
 .hint:empty{display:none}
 
 .opts{display:flex;flex-direction:column}
-.paper button.opt{height:auto;width:100%;display:grid;grid-template-columns:1fr auto;column-gap:18px;align-items:center;text-align:left;
-  text-transform:none;letter-spacing:0;background:transparent;color:var(--k);border-radius:0;padding:15px 0;border-top:1px solid var(--k-hair)}
-.paper button.opt:last-child{border-bottom:1px solid var(--k-hair)}
-.paper button.opt:active{transform:none;opacity:.55}
-.opt .t{grid-column:1;font:500 20px/1.2 var(--text)}
-.opt .d{grid-column:1;font:400 14px/1.45 var(--text);color:var(--k-soft);margin-top:4px}
-.opt::after{content:"";grid-column:2;grid-row:1/span 2;width:24px;height:24px;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(20,16,18,.3)}
-.opt.on::after{background:var(--w);box-shadow:inset 0 0 0 7.5px var(--m)}
+button.opt{height:auto;width:100%;display:grid;grid-template-columns:1fr auto;column-gap:18px;align-items:center;text-align:left;
+  background:transparent;color:var(--fg);border-radius:0;padding:15px 0;
+  border-top:1px solid rgba(128,128,128,.4);border-top:1px solid color-mix(in srgb,currentColor 22%,transparent)}
+button.opt:last-child{border-bottom:1px solid rgba(128,128,128,.4);border-bottom:1px solid color-mix(in srgb,currentColor 22%,transparent)}
+button.opt:active{transform:none;opacity:.55}
+.opt .t{grid-column:1;font:400 22px/1.2 var(--text);letter-spacing:-.01em}
+.opt .d{grid-column:1;font:400 15px/1.45 var(--text);opacity:.66;margin-top:4px}
+.opt::after{content:"";grid-column:2;grid-row:1/span 2;width:24px;height:24px;border-radius:50%;box-shadow:inset 0 0 0 1.5px currentColor;opacity:.4}
+.opt.on::after{opacity:1;background:var(--ground);box-shadow:inset 0 0 0 7.5px var(--fg)}
 
 .steps{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column}
-.steps li{counter-increment:s;display:grid;grid-template-columns:36px 1fr;align-items:baseline;padding:13px 0;border-top:1px solid var(--k-hair);
-  font:400 16px/1.45 var(--text);color:var(--k-soft)}
-.steps li:last-child{border-bottom:1px solid var(--k-hair)}
-.steps li::before{content:counter(s);font:500 22px/1 var(--display);color:var(--m)}
-.steps b{font-weight:500;color:var(--k)}
+.steps li{counter-increment:s;display:grid;grid-template-columns:36px 1fr;align-items:baseline;padding:13px 0;font:400 17px/1.45 var(--text);
+  border-top:1px solid rgba(128,128,128,.4);border-top:1px solid color-mix(in srgb,currentColor 22%,transparent)}
+.steps li:last-child{border-bottom:1px solid rgba(128,128,128,.4);border-bottom:1px solid color-mix(in srgb,currentColor 22%,transparent)}
+.steps li::before{content:counter(s);font:400 22px/1 var(--display);grid-row:1/span 2}
+.steps b{grid-column:2;font-weight:400}
+.steps span{grid-column:2;opacity:.66}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
 </head>
 <body>
-<div id="stage" data-on="m">
+<div id="stage">
+  <!-- Manicule: U+261F from Noto Sans Symbols 2 (SIL Open Font License 1.1), as an outline -->
+  <svg id="defs" aria-hidden="true"><symbol id="manicule" viewBox="0 0 609 1146"><path fill="currentColor" d="M87 178Q79 178 73 174Q67 169 67 158V83Q67 59 90 42Q113 26 149 17Q185 8 226 4Q266 0 300 0Q334 0 374 4Q415 8 451 18Q487 27 510 43Q534 59 534 83V158Q534 178 510 178H508Q515 172 515 163Q515 142 494 128Q474 114 442 106Q409 99 372 96Q334 92 300 92Q266 92 228 96Q190 99 158 108Q125 116 104 130Q84 143 84 163Q84 172 94 178ZM430 1146Q361 1146 361 1048Q361 1031 362 999Q364 967 364 936Q364 912 363 889Q362 866 360 844Q337 860 302 860Q257 860 238 817Q232 803 223 803Q215 803 204 808Q192 813 178 813Q126 813 109 764Q107 757 104 756Q100 754 89 754Q44 754 22 712Q0 670 0 591Q0 536 10 475Q21 414 44 356Q66 297 100 252V179Q157 125 307 125Q345 125 382 132Q420 139 451 150Q482 162 499 178Q500 179 499 190Q498 201 498 214Q497 226 497 234Q497 251 500 264Q502 277 512 294Q522 310 544 339Q581 385 595 420Q609 456 609 501Q609 604 583 668Q570 701 562 726Q554 751 550 765Q546 783 535 797Q534 819 532 840Q530 862 528 884Q524 918 520 958Q515 998 511 1029Q504 1090 485 1118Q466 1146 430 1146ZM491 781H501V780Q503 780 508 772Q513 764 515 756Q519 742 528 715Q536 688 550 654Q573 597 573 501Q573 462 561 432Q549 403 515 361Q492 331 480 312Q468 292 464 274Q461 256 461 234Q461 226 462 216Q462 205 463 196Q437 181 394 171Q351 161 307 161Q188 161 136 196V264Q105 300 82 352Q59 405 46 466Q34 527 34 591V631Q38 619 44 602Q51 586 63 563Q79 533 98 509Q117 485 133 474Q141 471 153 471Q163 471 172 475Q180 479 186 484Q196 465 205 450Q214 434 221 426Q226 422 234 419Q241 416 251 415Q247 401 245 386Q243 371 243 354Q243 329 248 309H283Q281 317 280 330Q279 344 279 354Q279 375 282 392Q284 408 291 422Q317 437 320 467Q335 462 349 462Q375 462 394 478Q412 494 412 525Q412 536 409 548Q406 559 401 571Q406 575 412 579Q418 583 425 587Q434 553 446 541L470 568Q465 572 460 592Q454 611 449 637Q444 663 440 688Q437 713 437 728Q437 748 450 764Q463 781 491 781ZM174 781Q186 781 197 778Q208 776 215 773Q210 760 210 746Q210 734 213 712Q216 691 221 666Q226 641 233 620Q244 585 259 554Q274 523 289 499Q294 486 294 477Q294 463 284 456Q274 448 261 448Q249 448 238 455Q231 464 219 486Q207 509 194 536Q182 562 173 584Q156 628 146 662Q135 696 135 725Q135 748 144 764Q153 781 174 781ZM299 824Q317 824 334 820Q350 816 361 802Q362 797 362 792Q362 788 362 784Q362 755 352 745Q341 735 321 735Q326 686 336 656Q345 625 355 597Q361 578 371 558Q381 539 379 523Q378 515 372 506Q367 497 353 497Q347 497 339 500Q331 502 329 503Q318 517 301 546Q284 576 267 625Q257 654 252 688Q246 721 246 741Q246 762 268 798Q279 814 284 819Q289 824 299 824ZM98 724Q102 724 104 723V716Q104 675 118 638Q133 602 144 574Q149 562 156 547Q163 532 170 517Q160 507 145 505Q134 513 120 531Q105 549 94 569Q84 587 76 602Q68 618 63 637Q58 656 58 687Q58 711 72 718Q87 724 98 724ZM430 1110Q449 1110 458 1092Q468 1073 475 1024Q480 994 484 955Q488 916 492 879Q494 865 495 849Q496 833 497 816H492Q449 816 425 790Q401 764 401 730Q401 710 405 680Q409 651 416 622Q409 618 402 614Q395 609 388 605V606Q384 619 376 643Q367 667 361 706Q379 711 388 730Q397 749 397 771Q397 784 396 792Q396 801 394 808Q396 838 398 872Q400 907 400 936Q400 968 398 1000Q397 1031 397 1048Q397 1084 405 1097Q413 1110 430 1110Z"/></symbol></svg>
   <div id="corner"></div>
   <div id="hub"></div>
   <div id="ctrl">
-    <button class="cbtn" id="pauseBtn" aria-label="Pause" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4.2" height="14" rx="1.2"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.2"/></svg></button>
-    <button class="cbtn" id="settingsBtn" aria-label="Settings"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 8h8.5M19.5 8h.5M4 16h.5M11.5 16H20" fill="none"/><circle cx="16" cy="8" r="2.6" fill="none"/><circle cx="8" cy="16" r="2.6" fill="none"/></svg></button>
+    <button class="cbtn" id="pauseBtn" aria-label="Pause" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><rect x="6.2" y="5" width="3.6" height="14" rx="1"/><rect x="14.2" y="5" width="3.6" height="14" rx="1"/></svg></button>
+    <button class="cbtn" id="settingsBtn" aria-label="Settings"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 8h8.5M19.5 8h.5M4 16h.5M11.5 16H20" fill="none"/><circle cx="16" cy="8" r="2.6" fill="none"/><circle cx="8" cy="16" r="2.6" fill="none"/></svg></button>
     <button class="cbtn" id="help" aria-label="How to play">?</button>
   </div>
 
-  <div id="pause" class="overlay paper" hidden>
+  <div id="pause" class="overlay" hidden>
     <div class="col center">
       <h2>Paused</h2>
       <div class="stack">
@@ -226,8 +217,8 @@ button:focus-visible{outline:2px solid currentColor;outline-offset:3px}
     </div>
   </div>
 
-  <div id="settings" class="overlay paper" hidden>
-    <button class="cbtn x" data-close="settings" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none"/></svg></button>
+  <div id="settings" class="overlay" hidden>
+    <button class="cbtn x" data-close="settings" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none"/></svg></button>
     <div class="col">
       <h2>Settings</h2>
       <div class="group">
@@ -249,18 +240,18 @@ button:focus-visible{outline:2px solid currentColor;outline-offset:3px}
     </div>
   </div>
 
-  <div id="rules" class="overlay paper" hidden>
-    <button class="cbtn x" data-close="rules" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none"/></svg></button>
+  <div id="rules" class="overlay" hidden>
+    <button class="cbtn x" data-close="rules" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none"/></svg></button>
     <div class="col">
       <h2>How to play</h2>
       <ol class="steps">
-        <li><span><b>Set the table.</b> Lay the phone flat in the middle. Everyone touches the screen once. That spot is yours.</span></li>
-        <li><span><b>Tap whenever you like.</b> No turns, no order. Each tap you land is a point.</span></li>
-        <li><span><b>Watch the odds.</b> The number in the middle is the chance the next tap busts. It starts tiny and climbs with every tap, at a different pace each round.</span></li>
-        <li><span><b>Bank or bust.</b> Bust and you get zero for the round and sit out the rest of it while everyone else keeps going.</span></li>
-        <li><span><b>Bonus taps.</b> Now and then a yellow tag drops in: the next tap is worth that many points instead of one. Same bust odds as any other tap.</span></li>
-        <li><span><b>Quiet ends it.</b> If nobody taps for 10 seconds, a 3-2-1 runs. Tap to keep going, or let it finish and everyone banks.</span></li>
-        <li><span><b>Win.</b> Most points after 10 rounds.</span></li>
+        <li><b>Set the table.</b><span>Lay the phone flat in the middle. Everyone touches the screen once, anywhere they like. That spot is theirs.</span></li>
+        <li><b>Tap whenever you like.</b><span>No turns, no order. Each tap you land is a point.</span></li>
+        <li><b>Watch the odds.</b><span>The number in the middle is the chance the next tap busts. It starts tiny and climbs with every tap, at a different pace each round.</span></li>
+        <li><b>Bank or bust.</b><span>Bust and you get zero for the round and sit out the rest of it while everyone else keeps going.</span></li>
+        <li><b>Bonus taps.</b><span>Now and then an orange tag drops in: the next tap is worth that many points instead of one. Same bust odds as any other tap.</span></li>
+        <li><b>Quiet ends it.</b><span>If nobody taps for 10 seconds, a 3-2-1 runs. Tap to keep going, or let it finish and everyone banks.</span></li>
+        <li><b>Win.</b><span>Most points after 10 rounds.</span></li>
       </ol>
       <p class="hint">Settings can make a bust end the round for everyone instead.</p>
       <div class="group">
@@ -268,11 +259,11 @@ button:focus-visible{outline:2px solid currentColor;outline-offset:3px}
         <p class="hint">A second way to play. Pick it in settings.</p>
       </div>
       <ol class="steps">
-        <li><span><b>Check the bust line.</b> Before each round the middle shows a number, like 12+. Every tap below it is safe. From 12 on, each tap might bust, and the odds get worse with every tap past it. It's never a sure thing.</span></li>
-        <li><span><b>3, 2, 1, fingers!</b> Everyone throws one hand, 0 to 5 fingers, at once.</span></li>
-        <li><span><b>Count up.</b> Lowest hand goes first: tap your spot once per finger. Then the next lowest keeps the count going, and so on.</span></li>
-        <li><span><b>Bust.</b> If one of your taps busts, you get nothing this round. Same for everyone who hadn't gone yet.</span></li>
-        <li><span><b>Score.</b> Everyone who survives the round gets a point. Most points after 10 rounds wins.</span></li>
+        <li><b>Check the bust line.</b><span>Before each round the middle shows a number, like 12+. Every tap below it is safe. From 12 on, each tap might bust, and the odds get worse with every tap past it. It's never a sure thing.</span></li>
+        <li><b>3, 2, 1, fingers!</b><span>Everyone throws one hand, 0 to 5 fingers, at once.</span></li>
+        <li><b>Count up.</b><span>Lowest hand goes first: tap your spot once per finger. Then the next lowest keeps the count going, and so on.</span></li>
+        <li><b>Bust.</b><span>If one of your taps busts, you get nothing this round. Same for everyone who hadn't gone yet.</span></li>
+        <li><b>Score.</b><span>Everyone who survives the round gets a point. Most points after 10 rounds wins.</span></li>
       </ol>
       <p class="hint">Showed zero fingers? You don't tap. If you get marked as a bust by mistake, tap your name on the score sheet to flip it.</p>
       <button id="closeRules">Got it</button>
@@ -281,17 +272,18 @@ button:focus-visible{outline:2px solid currentColor;outline-offset:3px}
 </div>
 
 <script>
-/* Players, in the order fingers land. On the magenta table the first two discs are yellow and cyan; black is kept for the bust.
-   `on` is the ink that reads on that colour: k (key) or w (white). */
+/* Players, in the order fingers land. Each is a pair: the disc's colour and the ink that sits on it.
+   Neither red nor oxblood is ever a player: red is the bust, oxblood is the table. */
 const PLAYERS=[
-  {name:'Yellow',bg:'#ffe033',on:'k'},{name:'Cyan',bg:'#16bdf2',on:'k'},{name:'White',bg:'#ffffff',on:'k'},{name:'Blue',bg:'#2340e0',on:'w'},
-  {name:'Orange',bg:'#ff8a1f',on:'k'},{name:'Mint',bg:'#6fe6b4',on:'k'},{name:'Lilac',bg:'#c9b6ff',on:'k'},{name:'Brown',bg:'#7a3f16',on:'w'}];
-const INK={k:'var(--k)',w:'var(--w)'};
+  {name:'Blue',  bg:'#7f9ad1',ink:'#9dffb2'},{name:'Orange',bg:'#ff8800',ink:'#000000'},
+  {name:'Mint',  bg:'#9dffb2',ink:'#000000'},{name:'Yellow',bg:'#fff57d',ink:'#943821'},
+  {name:'Grey',  bg:'#e1e1df',ink:'#ff0000'},{name:'White', bg:'#ffffff',ink:'#652114'},
+  {name:'Taupe', bg:'#918576',ink:'#fff57d'},{name:'Pink',  bg:'#ff96d9',ink:'#652114'}];
 const R=105; // tap hit radius px, wider than the disc so a slightly-off finger still counts
 const MAX_ROUNDS=10;
 const stage=document.getElementById('stage'), hub=document.getElementById('hub'), corner=document.getElementById('corner');
 const S={phase:'lobby',mode:'ffa',bustEnds:false,zones:[],round:0,count:0,low:0,high:0,bust:0,width:0,timer:null,idle:null,ending:false,base:0,step:0};
-let tone='m', sheetKey=''; // tone: the ground the corner controls sit on. m = the magenta table, k = a light sheet (ink controls), w = a dark sheet
+let sheetKey='';
 const IDLE_MS=10000; // free-for-all: silence this long starts the end-of-round countdown
 const GOAD_MS=3500, GOAD_P=0.3, GOAD_MAX=1; // free-for-all: after this much quiet, maybe dangle a bonus on the next tap (at most GOAD_MAX per round)
 
@@ -323,12 +315,12 @@ const swell=c=>Math.pow(Math.min(1,bustChance(c)/0.10),0.7);
 
 /* ---------- zone helpers ---------- */
 function zoneAt(x,y){let best=null,bd=R*R;for(const z of S.zones){const d=(z.x-x)**2+(z.y-y)**2;if(d<bd){bd=d;best=z}}return best}
-// keep-out box around the middle, so no disc ends up under the number (at its largest) or the start panel
+// discs go anywhere a finger lands, except a keep-out box around the middle: the number at its largest, and the start panel
 function keepOut(){
-  const st=stage.getBoundingClientRect(), vmin=Math.min(st.width,st.height)/100;
-  const fsR=Math.min(300,Math.max(72,36*vmin)), fsX=Math.min(340,Math.max(120,48*vmin)); // readout at XL, and the Throw Hands bust line
-  let hw=Math.max(fsR*.95,fsX*.72)+80, hh=fsX*.45+85, kx=st.width/2, ky=st.height/2;
-  if(S.phase==='lobby'){ // plus the whole start panel (wordmark, buttons) and a disc radius around it
+  const st=stage.getBoundingClientRect(), vmin=Math.min(st.width,st.height)/100, hands=S.mode==='hands';
+  const fs=hands?Math.min(320,Math.max(120,44*vmin)):Math.min(280,Math.max(84,34*vmin)); // the Throw Hands bust line, or the readout at XL
+  let hw=fs*(hands?.72:1.05)+80, hh=fs*.45+85, kx=st.width/2, ky=st.height/2;
+  if(S.phase==='lobby'){ // plus the start panel (wordmark, buttons) and a disc radius around it
     const r=hub.getBoundingClientRect();
     const l=Math.min(kx-hw,r.left-st.left-60), rt=Math.max(kx+hw,r.right-st.left+60);
     const t=Math.min(ky-hh,r.top-st.top-80), b=Math.max(ky+hh,r.bottom-st.top+80);
@@ -346,40 +338,38 @@ function addZone(x,y){
   const used=new Set(S.zones.map(z=>z.ci));let ci=0;while(used.has(ci)&&ci<PLAYERS.length)ci++;
   if(ci>=PLAYERS.length)return;
   const p=PLAYERS[ci];
-  S.zones.push({id:Date.now()+Math.random(),x,y,ci,color:p.bg,on:p.on,name:p.name,taps:0,bonus:0,went:false,bust:false,sat:false,score:0,fresh:true});
+  S.zones.push({id:Date.now()+Math.random(),x,y,ci,color:p.bg,ink:p.ink,name:p.name,taps:0,bonus:0,went:false,bust:false,sat:false,score:0,fresh:true});
 }
 function renderZones(){
-  for(const el of stage.querySelectorAll('.zone,.ring,#keepout'))el.remove();
+  for(const el of stage.querySelectorAll('.zone,#keepout'))el.remove();
   if(S.phase==='final')return; // game over: the table is cleared, only the scores remain
   if(S.phase==='lobby'){
     const k=keepOut(),ko=document.createElement('div');ko.id='keepout';
     ko.style.cssText=`left:${k.cx-k.hw}px;top:${k.cy-k.hh}px;width:${k.hw*2}px;height:${k.hh*2}px`;stage.appendChild(ko);
-    if(S.zones.length<2){ // an empty table shows faint rings where fingers might go
-      const W=stage.clientWidth,H=stage.clientHeight;
-      [[.24,.17],[.76,.83],[.76,.17],[.24,.83]].forEach(([fx,fy],i)=>{
-        const x=fx*W,y=fy*H;
-        if(inKeepOut(x,y)||S.zones.some(z=>Math.hypot(z.x-x,z.y-y)<170))return;
-        const r=document.createElement('div');r.className='ring';r.style.cssText=`left:${x}px;top:${y}px;animation-delay:${-i*.65}s`;stage.appendChild(r);
-      });
-    }
   }
   for(const z of S.zones){
     const el=document.createElement('div');
     el.className='zone'+(z.fresh?' fresh':'')+(z.bust?' bust':'');
     z.fresh=false;
-    const ang=Math.atan2(z.y-cy(),z.x-cx())*180/Math.PI-90; // the numeral's foot points out toward its player's seat, so it reads upright from there
-    el.style.cssText=`left:${z.x}px;top:${z.y}px;transform:translate(-50%,-50%) rotate(${ang}deg);--d:${z.color};--on:${INK[z.on]}`;
-    let big='';
-    if(S.phase==='tap')big=z.bust?'×':String(z.taps+z.bonus); // the disc shows what you'd bank right now, bonus included
-    else if(S.phase==='result'||S.phase==='boom')big=z.bust?'×':(S.mode==='ffa'?'+'+(z.taps+z.bonus):'+1');
-    el.innerHTML=`<div class="face"><div class="big">${big}</div></div>`;
+    // each disc is turned to face its own seat: numerals read upright from there, and the manicule points out at its player
+    const ang=Math.atan2(z.y-cy(),z.x-cx())*180/Math.PI-90;
+    el.style.cssText=`left:${z.x}px;top:${z.y}px;transform:translate(-50%,-50%) rotate(${ang}deg);--d:${z.color};--on:${z.ink}`;
+    let inner;
+    if(S.phase==='lobby')inner='<svg class="hand" viewBox="0 0 609 1146" aria-hidden="true"><use href="#manicule"/></svg>'; // "this spot is yours"
+    else{
+      let big='';
+      if(S.phase==='tap')big=z.bust?'×':String(z.taps+z.bonus); // the disc shows what you'd bank right now, bonus included
+      else if(S.phase==='result'||S.phase==='boom')big=z.bust?'×':(S.mode==='ffa'?'+'+(z.taps+z.bonus):'+1');
+      inner=`<div class="big">${big}</div>`;
+    }
+    el.innerHTML=`<div class="face">${inner}</div>`;
     el.dataset.id=z.id;
     stage.appendChild(el);
   }
 }
 
 /* ---------- hub ---------- */
-// sheet: {key, ground, fg, paper, ox, oy} turns the middle into a full-screen sheet of colour that wipes in from (ox, oy)
+// sheet: {key, ground, fg, ox, oy} turns the middle into a full-screen sheet in that pair of colours, wiping in from (ox, oy)
 function setHub(html,sheet){
   hub.innerHTML=html;
   const key=sheet?sheet.key:'';
@@ -388,15 +378,16 @@ function setHub(html,sheet){
     if(sheet){void hub.offsetWidth;hub.classList.add('sheet');hub.scrollTop=0}
     sheetKey=key;
   }
-  hub.classList.toggle('paper',!!(sheet&&sheet.paper));
-  hub.style.cssText=sheet?`--ground:${sheet.ground};--fg:${sheet.fg};--ox:${sheet.ox||'50%'};--oy:${sheet.oy||'50%'}`:'';
+  hub.style.cssText=sheet?`--ox:${sheet.ox||'50%'};--oy:${sheet.oy||'50%'}`:'';
+  // the pair is set on the stage, so the corner controls take the sheet's colours too
+  if(sheet){stage.style.setProperty('--ground',sheet.ground);stage.style.setProperty('--fg',sheet.fg);stage.dataset.sheet=sheet.key}
+  else{stage.style.removeProperty('--ground');stage.style.removeProperty('--fg');delete stage.dataset.sheet}
 }
 const readout=(num,unit,c)=>`<div class="readout ${S.count?'bump':'enter'}" style="--s:${swell(c).toFixed(3)}">${num}${unit?`<i>${unit}</i>`:''}</div>`;
 function renderHub(){
   const n=S.zones.length, ffa=S.mode==='ffa';
-  tone='m';
   if(S.phase==='lobby'){
-    setHub(`<div class="mark">Tap<br>App</div>
+    setHub(`<div class="mark">Tap App</div>
       ${ffa?'':'<div class="eyebrow">Throw hands</div>'}
       <div class="row">${n>=2?'<button id="go">Start</button>':''}${n?'<button class="ghost" id="clear">Clear</button>':''}</div>`);
   }else if(S.phase==='range'){
@@ -416,13 +407,12 @@ function renderHub(){
     const nxt=S.count+1, hot=nxt>=S.low, left=S.low-S.count-1;
     setHub(`<div class="eyebrow">Bust ${S.low}+ · lowest hand first</div>
       ${readout(S.count,'',nxt)}
-      <div class="line">${S.count===0?'Show fingers. Lowest player taps their number in their spot.':hot?`Next tap busts <b>${pct(nxt)}</b> of the time.`:`Safe for ${left} more tap${left===1?'':'s'}.`}</div>
+      <div class="line">${S.count===0?'Show fingers. Lowest player taps their number in their spot.':hot?`Next tap busts ${pct(nxt)} of the time.`:`Safe for ${left} more tap${left===1?'':'s'}.`}</div>
       <button class="ghost" id="end">Everyone's gone</button>`);
   }else if(S.phase==='boom'){
     setHub('');
   }else if(S.phase==='result'){
-    // between rounds: a white score sheet. running totals, very large; this round's gain (or the bust) rides along small. ordered by total.
-    tone='k';
+    // between rounds: the table's pair turned inside out. running totals, very large; this round's gain (or the bust) rides along small. ordered by total.
     const rows=[...S.zones].map(z=>({z,pts:z.bust?0:(ffa?z.taps+z.bonus:1)})).map(r=>({...r,total:r.z.score+r.pts}))
       .sort((a,b)=>(b.total-a.total)||(b.pts-a.pts));
     setHub(`<div class="col">
@@ -433,12 +423,11 @@ function renderHub(){
         <span class="total">${total}</span></div>`).join('')}</div>
       ${ffa?'':'<div class="line">Tap a name to flip anyone who showed zero fingers.</div>'}
       <button id="next">${S.round>=MAX_ROUNDS?'Final scores':'Next round'}</button>
-    </div>`,{key:'result',ground:'var(--w)',fg:'var(--k)',paper:true});
+    </div>`,{key:'result',ground:'var(--pink)',fg:'var(--oxblood)'});
   }else if(S.phase==='final'){
-    // game over: the table floods with the winner's colour, growing out of the winner's own spot
+    // game over: the table floods with the winner's own pair, growing out of the winner's spot
     const sorted=[...S.zones].sort((a,b)=>b.score-a.score), top=sorted[0].score;
     const winners=sorted.filter(z=>z.score===top), solo=winners.length===1, w=winners[0];
-    tone=solo?w.on:'m';
     setHub(`<div class="col">
       <div class="eyebrow">${solo?'Winner':'Tie game'}</div>
       <div class="champ${solo?'':' tie'}">${winners.map(z=>z.name).join(' &amp; ')}</div>
@@ -446,7 +435,7 @@ function renderHub(){
         <span class="chip" style="--d:${z.color}"></span><span class="name">${z.name}</span><span></span>
         <span class="total">${z.score}</span></div>`).join('')}</div>
       <button id="newtable">New game</button>
-    </div>`,{key:'final',ground:solo?w.color:'var(--m)',fg:solo?INK[w.on]:'var(--w)',ox:solo?w.x+'px':'50%',oy:solo?w.y+'px':'50%'});
+    </div>`,{key:'final',ground:solo?w.color:'var(--peri)',fg:solo?w.ink:'var(--mint)',ox:solo?w.x+'px':'50%',oy:solo?w.y+'px':'50%'});
   }
   corner.textContent=S.round&&S.phase!=='final'?`Round ${Math.min(S.round,MAX_ROUNDS)}/${MAX_ROUNDS}`:'';
 }
@@ -455,7 +444,6 @@ function render(keep){
   if(!keep)document.getElementById('count')?.remove();
   renderHub();renderZones(); // hub first: the lobby keep-out is measured from it
   pauseBtn.hidden=!['range','count','tap','result'].includes(S.phase);
-  stage.dataset.on=tone;
 }
 
 /* ---------- flow ---------- */
@@ -475,6 +463,15 @@ function preRoll(){
     el.textContent=c;el.style.animation='none';void el.offsetWidth;el.style.animation='';
     if(navigator.vibrate)navigator.vibrate(30);
     c--;S.timer=setTimeout(tick,850)};tick()},5200);
+}
+// capsules drop in under the top bar. if a disc is planted there, they sit just above the middle number instead: that band is always clear
+function placeCapsule(el){
+  stage.appendChild(el);
+  const w=el.offsetWidth,h=el.offsetHeight,x0=stage.clientWidth/2-w/2,y0=el.offsetTop;
+  const hit=S.zones.some(z=>Math.hypot(z.x-Math.max(x0,Math.min(z.x,x0+w)),z.y-Math.max(y0,Math.min(z.y,y0+h)))<75+8);
+  if(!hit)return;
+  el.classList.add('mid');
+  el.style.top=Math.max(8,hub.getBoundingClientRect().top-stage.getBoundingClientRect().top-el.offsetHeight-14)+'px';
 }
 /* free-for-all idle clock: quiet for IDLE_MS → 3-2-1 → round over. Any tap cancels it. */
 function armIdle(){
@@ -500,15 +497,6 @@ function armIdle(){
       el.textContent=c;el.style.animation='none';void el.offsetWidth;el.style.animation='';
       c--;S.timer=setTimeout(tick,850)};tick();
   },IDLE_MS);
-}
-// capsules drop in under the top bar. if a disc is planted there, they sit just above the middle number instead: that band is always clear
-function placeCapsule(el){
-  stage.appendChild(el);
-  const w=el.offsetWidth,h=el.offsetHeight,x0=stage.clientWidth/2-w/2,y0=el.offsetTop;
-  const hit=S.zones.some(z=>Math.hypot(z.x-Math.max(x0,Math.min(z.x,x0+w)),z.y-Math.max(y0,Math.min(z.y,y0+h)))<75+8);
-  if(!hit)return;
-  el.classList.add('mid');
-  el.style.top=Math.max(8,hub.getBoundingClientRect().top-stage.getBoundingClientRect().top-el.offsetHeight-14)+'px';
 }
 function cancelEnding(){S.ending=false;clearTimeout(S.timer);document.getElementById('count')?.remove()}
 function clearGoad(){S.goad=0;clearTimeout(S.goadT);document.getElementById('goad')?.remove()}
@@ -596,7 +584,7 @@ for(const b of document.querySelectorAll('[data-close]'))b.addEventListener('cli
   if(b.dataset.close==='rules')rules.hidden=true; else closeSettings();
 });
 
-/* ---------- bust: a black disc bursts out of the busted spot ---------- */
+/* ---------- bust: a red disc bursts out of the busted spot ---------- */
 function explode(z,done,quick){
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const boom=document.createElement('div');boom.id='boom';if(quick)boom.classList.add('quick');
@@ -607,22 +595,22 @@ function explode(z,done,quick){
   const W=cv.width=stage.clientWidth*devicePixelRatio,H=cv.height=stage.clientHeight*devicePixelRatio,dpr=devicePixelRatio;
   const ctx=cv.getContext('2d');
   const ox=z.x*dpr,oy=z.y*dpr, maxR=Math.hypot(W,H);
-  const parts=[];const cols=[z.color,'#ffffff','#ffe033','#16bdf2','#ec0a8c']; // dots in the busted player's colour plus paper, yellow, cyan, magenta
+  const parts=[];const cols=[z.color,'#ff96d9','#652114','#ff96d9','#ffffff']; // dots: the busted player's colour among pink, oxblood and white
   for(let i=0;i<(reduce?0:(quick?110:220));i++){const a=Math.random()*Math.PI*2,sp=(0.35+Math.random()*1.3)*maxR/60;
     parts.push({x:ox,y:oy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:(2.5+Math.random()*7)*dpr,c:cols[i%cols.length]})}
   const t0=performance.now(),DUR=quick?650:1500;
   function frame(t){
     const k=Math.max(0,Math.min(1,(t-t0)/DUR));
     ctx.clearRect(0,0,W,H);
-    // the black disc: it swallows the table when the round is over, or flashes and clears when only one player is out
+    // the red disc: it swallows the table when the round is over, or flashes and clears when only one player is out
     const ring=Math.min(1,k*1.7)*maxR*1.05;
-    ctx.fillStyle=`rgba(20,16,18,${quick?0.94:1})`;ctx.beginPath();ctx.arc(ox,oy,ring,0,7);ctx.fill();
+    ctx.fillStyle=`rgba(255,0,0,${quick?0.94:1})`;ctx.beginPath();ctx.arc(ox,oy,ring,0,7);ctx.fill();
     for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vx*=0.985;p.vy=p.vy*0.985+0.22*dpr;
       ctx.globalAlpha=Math.max(0,1-k*k);ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill()}
     ctx.globalAlpha=1;
     if(k<1)requestAnimationFrame(frame);
     else if(quick)boom.remove(); // its own CSS fade has already lifted it
-    else{ // the next screen starts wiping in underneath while the black lifts
+    else{ // the next screen starts wiping in underneath while the red lifts
       if(done)done();
       boom.classList.add('fade');setTimeout(()=>boom.remove(),450);
     }
