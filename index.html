@@ -44,7 +44,7 @@ body{margin:0;background:var(--t-ground);color:var(--fg);font-family:var(--text)
 /* ---------- discs: each player is a pair too, a ground (--d) and the ink that sits on it (--on) ---------- */
 .zone{position:absolute;left:0;top:0;width:150px;height:150px;z-index:1;pointer-events:none}
 .zone .face{position:absolute;inset:0;border-radius:50%;background:var(--d);color:var(--on);display:grid;place-items:center}
-.zone .big{font:400 70px/1 var(--display);letter-spacing:-.06em}
+.zone .big{font:400 70px/1 var(--display);letter-spacing:-.06em;margin-right:.06em} /* the margin gives back the gap tracking leaves after the last figure, so the number sits centred */
 .zone .hand{display:block;height:98px;width:auto;fill:currentColor;transform:translateY(5px)}
 .zone.fresh .face{animation:land .45s var(--spring) both}
 @keyframes land{from{transform:scale(0)}}
@@ -55,6 +55,10 @@ body{margin:0;background:var(--t-ground);color:var(--fg);font-family:var(--text)
 .zone .ripple{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 3px var(--d);animation:ripple .55s var(--ease) forwards}
 @keyframes ripple{from{opacity:.9}to{transform:scale(1.5);opacity:0}}
 .zone.bust .face{background:var(--bust-ground);color:var(--bust-fg)}
+/* the bust mark is drawn rather than set in type, so it sits dead centre on the disc, in the weight of the numerals it replaces */
+.zone .cross{display:block;width:80px;height:80px;fill:none;stroke:currentColor;stroke-width:9}
+.zone.hit .cross{animation:stamp .5s var(--hd,.28s) var(--spring) both} /* lands as the bust flash clears */
+@keyframes stamp{from{transform:scale(2.2);opacity:0}}
 .zone .float{position:absolute;left:50%;top:50%;height:46px;min-width:64px;margin:-23px 0 0 -32px;padding:0 14px;box-sizing:border-box;border-radius:999px;
   background:var(--now-ground);color:var(--now-fg);display:grid;place-items:center;font:400 28px/1 var(--display);letter-spacing:-.04em;animation:floatup 1s var(--ease) forwards}
 @keyframes floatup{from{transform:translateY(-30px) scale(.5);opacity:0}25%{transform:translateY(-84px) scale(1);opacity:1}70%{opacity:1}to{transform:translateY(-124px);opacity:0}}
@@ -393,6 +397,9 @@ function addZone(x,y){
   if(ci>=WAY.players.length)return;
   S.zones.push({id:Date.now()+Math.random(),x,y,ci,taps:0,bonus:0,went:false,bust:false,sat:false,score:0,fresh:true});
 }
+// the bust mark: a square X whose stroke ends just touch the corners of its box
+const BUST_X='<svg class="cross" viewBox="0 0 80 80" aria-hidden="true"><path d="M3.2 3.2L76.8 76.8M76.8 3.2L3.2 76.8"/></svg>';
+const STAMP_DELAY=.28, STAMP_FOR=.8; // s: the mark waits for the flash, and how long after a bust it may still be landing
 function renderZones(){
   for(const el of stage.querySelectorAll('.zone,#keepout'))el.remove();
   if(S.phase==='final')return; // game over: the table is cleared, only the scores remain
@@ -402,17 +409,23 @@ function renderZones(){
   }
   for(const z of S.zones){
     const el=document.createElement('div');
-    el.className='zone'+(z.fresh?' fresh':'')+(z.bust?' bust':'');
+    // the bust mark stamps in once. other players keep tapping and every tap redraws the discs, so a mark that is still
+    // landing picks its animation up where it was (a negative delay) instead of starting over or being cut short
+    const since=z.bust&&z.hitAt?(performance.now()-z.hitAt)/1000:9, hit=since<STAMP_FOR;
+    el.className='zone'+(z.fresh?' fresh':'')+(z.bust?' bust':'')+(hit?' hit':'');
     z.fresh=false;
-    // each disc is turned to face its own seat: numerals read upright from there, and the manicule points out at its player
-    const ang=Math.atan2(z.y-cy(),z.x-cx())*180/Math.PI-90;
-    el.style.cssText=`left:${z.x}px;top:${z.y}px;transform:translate(-50%,-50%) rotate(${ang}deg);--d:${P(z).bg};--on:${P(z).ink}`;
+    // each disc is turned to face its own seat: numerals read upright from there, and the manicule points out at its player.
+    // a busted disc is not turned: its X is for the whole table, so it stays square to the screen like the number in the
+    // middle (and a square X turned 45 degrees would read as a plus)
+    const ang=z.bust?0:Math.atan2(z.y-cy(),z.x-cx())*180/Math.PI-90;
+    el.style.cssText=`left:${z.x}px;top:${z.y}px;transform:translate(-50%,-50%) rotate(${ang}deg);--d:${P(z).bg};--on:${P(z).ink}`+(hit?`;--hd:${(STAMP_DELAY-since).toFixed(3)}s`:'');
     let inner;
     if(S.phase==='lobby')inner='<svg class="hand" viewBox="0 0 609 1146" aria-hidden="true"><use href="#manicule"/></svg>'; // "this spot is yours"
+    else if(z.bust)inner=BUST_X;
     else{
       let big='';
-      if(S.phase==='tap')big=z.bust?'×':String(z.taps+z.bonus); // the disc shows what you'd bank right now, bonus included
-      else if(S.phase==='result'||S.phase==='boom')big=z.bust?'×':(S.mode==='ffa'?'+'+(z.taps+z.bonus):'+1');
+      if(S.phase==='tap')big=String(z.taps+z.bonus); // the disc shows what you'd bank right now, bonus included
+      else if(S.phase==='result'||S.phase==='boom')big=S.mode==='ffa'?'+'+(z.taps+z.bonus):'+1';
       inner=`<div class="big">${big}</div>`;
     }
     el.innerHTML=`<div class="face">${inner}</div>`;
@@ -561,11 +574,11 @@ function tap(z){
   S.count++;z.taps++;z.went=true;
   if(bonus)z.bonus+=bonus-1; // a bonus tap is worth exactly the number shown (the tap itself is one of those points)
   if(Math.random()<bustChance(S.count)){
-    z.bust=true;
+    z.bust=true;z.hitAt=performance.now();
     const knockout=S.mode==='ffa'&&!S.bustEnds, alive=S.zones.filter(o=>!o.sat&&!o.bust).length;
     const endsRound=!knockout||alive===0;   // knockout: only this player is out, the table keeps tapping, unless nobody's left
     if(endsRound)S.bust=S.count;
-    if(S.mode!=='ffa')for(const o of S.zones)if(!o.sat&&!o.went)o.bust=true; // hands: everyone still to go busts too
+    if(S.mode!=='ffa')for(const o of S.zones)if(!o.sat&&!o.went){o.bust=true;o.hitAt=z.hitAt} // hands: everyone still to go busts too
     if(navigator.vibrate)navigator.vibrate([80,40,160,40,300]);
     clearGoad();
     if(endsRound){clearTimeout(S.idle);S.phase='boom';render();explode(z,()=>{S.phase='result';render()});return}
