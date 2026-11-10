@@ -222,7 +222,7 @@ button.mode.on b::after{content:" ✓";color:var(--bust)}
         <li><b>No order, no hands.</b> Anyone taps their spot whenever they like.</li>
         <li><b>Watch the odds.</b> The middle shows the chance the next tap busts. It starts tiny and climbs with every tap, at a different pace each round.</li>
         <li><b>Bank or bust.</b> Each tap you land is a point. Bust and you get zero for the round and sit out the rest of it while everyone else keeps going. (Settings can make a bust end the round instead.)</li>
-        <li><b>Bonus taps.</b> Now and then a yellow tag pops up: the next tap is worth extra. Same bust odds as any other tap.</li>
+        <li><b>Bonus taps.</b> Now and then a yellow tag pops up: the next tap is worth that many points instead of one. Same bust odds as any other tap.</li>
         <li><b>Quiet ends it.</b> If nobody taps for 10 seconds, a 3-2-1 runs. Tap to keep going, or let it finish and everyone banks.</li>
       </ol>
       <button id="closeRules">Got it</button>
@@ -266,8 +266,14 @@ const pct=c=>{const p=bustChance(c)*100;return (p<10?p.toFixed(p<1?2:1).replace(
 /* ---------- zone helpers ---------- */
 function zoneAt(x,y){let best=null,bd=R*R;for(const z of S.zones){const d=(z.x-x)**2+(z.y-y)**2;if(d<bd){bd=d;best=z}}return best}
 // keep-out box around the middle readout, so no disc ends up under the bust %
-function keepOut(){const w=Math.min(300,stage.clientWidth*.78);return {hw:w/2+40,hh:110}}
-function inKeepOut(x,y){const k=keepOut();return Math.abs(x-cx())<k.hw&&Math.abs(y-cy())<k.hh}
+function keepOut(){
+  if(S.phase==='lobby'){ // lobby: keep discs off the whole start panel (wordmark, text, buttons), plus a disc radius
+    const r=hub.getBoundingClientRect(),st=stage.getBoundingClientRect();
+    return {hw:r.width/2+60,hh:(r.height/2)+80,cx:r.left-st.left+r.width/2,cy:r.top-st.top+r.height/2};
+  }
+  const w=Math.min(300,stage.clientWidth*.78);return {hw:w/2+40,hh:110,cx:cx(),cy:cy()};
+}
+function inKeepOut(x,y){const k=keepOut();return Math.abs(x-k.cx)<k.hw&&Math.abs(y-k.cy)<k.hh}
 function addZone(x,y){
   if(inKeepOut(x,y)){
     const ko=document.getElementById('keepout');if(ko){ko.classList.remove('nope');void ko.offsetWidth;ko.classList.add('nope')}
@@ -282,7 +288,7 @@ function renderZones(){
   for(const el of stage.querySelectorAll('.zone,#keepout'))el.remove();
   if(S.phase==='final')return; // game over: the table is cleared, only the scores remain
   if(S.phase==='lobby'){const k=keepOut(),ko=document.createElement('div');ko.id='keepout';
-    ko.style.cssText=`left:${cx()-k.hw}px;top:${cy()-k.hh}px;width:${k.hw*2}px;height:${k.hh*2}px`;stage.appendChild(ko)}
+    ko.style.cssText=`left:${k.cx-k.hw}px;top:${k.cy-k.hh}px;width:${k.hw*2}px;height:${k.hh*2}px`;stage.appendChild(ko)}
   for(const z of S.zones){
     const el=document.createElement('div');
     el.className='zone'+(z.fresh?' fresh':'')+(z.sat?' sat':'')+(z.bust?' bust':'')+(z.went&&!z.bust?' went':'');
@@ -355,7 +361,7 @@ function renderHub(){
   const showScores=S.phase==='final'; // the recap board carries totals between rounds
   corner.innerHTML=S.round?`Round <b>${Math.min(S.round,MAX_ROUNDS)}</b> / ${MAX_ROUNDS}`+(showScores?'<br>'+S.zones.map(z=>`<span style="color:${z.color}">${z.name} <b>${z.score}</b></span>`).join(' · '):''):'';
 }
-function render(){document.getElementById('count')?.remove();renderZones();renderHub();
+function render(){document.getElementById('count')?.remove();renderHub();renderZones(); // hub first: the lobby keep-out is measured from it
   pauseBtn.hidden=!['range','count','tap','result'].includes(S.phase)}
 
 /* ---------- flow ---------- */
@@ -409,7 +415,7 @@ function tap(z){
   let bonus=0;
   if(S.mode==='ffa'){cancelEnding();bonus=S.goad;clearGoad();armIdle()}
   S.count++;z.taps++;z.went=true;
-  z.bonus+=bonus; // paid out only if this tap survives (a bust wipes the round anyway)
+  if(bonus)z.bonus+=bonus-1; // a bonus tap is worth exactly the number shown (the tap itself is one of those points)
   if(Math.random()<bustChance(S.count)){
     z.bust=true;
     const knockout=S.mode==='ffa'&&!S.bustEnds, alive=S.zones.filter(o=>!o.sat&&!o.bust).length;
