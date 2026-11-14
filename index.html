@@ -359,7 +359,8 @@ const stage=document.getElementById('stage'), hub=document.getElementById('hub')
 const S={phase:'lobby',mode:'ffa',bustEnds:false,zones:[],round:0,count:0,low:0,high:0,bust:0,width:0,timer:null,idle:null,ending:false,base:0,step:0};
 let sheetKey='';
 const IDLE_MS=5000; // free-for-all: silence this long starts the end-of-round countdown
-const GOAD_MS=2000, GOAD_P=0.5, GOAD_MAX=2; // free-for-all: after this much quiet, maybe dangle a bonus on the next tap (at most GOAD_MAX per round)
+const GOAD_MS=3800, GOAD_P=0.5, GOAD_MAX=2, GOAD_HOLD=3200; // free-for-all: the bonus is a goad for a table that has gone quiet and is about to let
+// the round run out. It shows late in the silence (GOAD_MS of IDLE_MS), at most GOAD_MAX per round, and holds the countdown off for GOAD_HOLD
 const GOAD_VALUES=[2,3,3,4,4,5]; // what a bonus tap can be worth: never more than 5
 // the bonus sticker's shape: a 16-point price burst
 const BURST='<svg class="burst" viewBox="-50 -50 100 100" aria-hidden="true"><polygon points="'+Array.from({length:32},(_,i)=>{const r=i%2?41.5:50,a=i*Math.PI/16;return (r*Math.cos(a)).toFixed(1)+','+(r*Math.sin(a)).toFixed(1)}).join(' ')+'"/></svg>';
@@ -589,8 +590,9 @@ function armIdle(){
     g.innerHTML=`${BURST}<div class="big">+${S.goad}</div><div class="lbl">Next tap</div>`;
     placeCapsule(g);
     if(navigator.vibrate)navigator.vibrate([20,40,20]);
+    clearTimeout(S.idle);S.idle=setTimeout(ending,GOAD_HOLD); // give the dare time to work before the round starts ending
   },GOAD_MS);
-  S.idle=setTimeout(()=>{
+  const ending=()=>{
     clearGoad();
     S.ending=true;
     const ov=document.createElement('div');ov.id='count';ov.className='soft capsule';
@@ -602,7 +604,8 @@ function armIdle(){
       if(c===0){S.ending=false;endRound();return}
       el.textContent=c;el.style.animation='none';void el.offsetWidth;el.style.animation='';
       c--;S.timer=setTimeout(tick,850)};tick();
-  },IDLE_MS);
+  };
+  S.idle=setTimeout(ending,IDLE_MS);
 }
 function cancelEnding(){S.ending=false;clearTimeout(S.timer);document.getElementById('count')?.remove()}
 function clearGoad(){S.goad=0;clearTimeout(S.goadT);document.getElementById('goad')?.remove()}
