@@ -116,8 +116,6 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 #goad .burst{position:absolute;inset:0;width:100%;height:100%;fill:var(--now-ground);z-index:-1;animation:spin 14s linear infinite}
 #goad .big{font-size:54px;animation:beat .9s .55s ease-in-out infinite}
 #goad .lbl{font-size:11px;text-align:center}
-#goad.hot{width:156px;height:156px}
-#goad.hot .big{font-size:64px}
 #goad.mid{width:104px;height:104px}
 #goad.mid .big{font-size:40px}
 #goad.mid .lbl{font-size:9.5px}
@@ -125,7 +123,11 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 @keyframes nudge{0%,100%{transform:translateX(-50%) rotate(-7deg)}50%{transform:translateX(-50%) rotate(7deg)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
-#count.soft{background:var(--t-fg);color:var(--t-ground)}
+#count.soft{background:var(--t-fg);color:var(--t-ground);height:112px;padding:0 38px 0 30px;gap:16px}
+#count.soft .big{font-size:88px}
+#count.soft .lbl{font-size:15px}
+#count.soft.mid{height:92px;padding:0 30px 0 24px}
+#count.soft.mid .big{font-size:70px}
 #count.soft #cd{min-width:.6em;text-align:center;animation:tick .45s var(--spring) both}
 @keyframes tick{from{transform:scale(1.6);opacity:0}}
 
@@ -357,8 +359,8 @@ const stage=document.getElementById('stage'), hub=document.getElementById('hub')
 const S={phase:'lobby',mode:'ffa',bustEnds:false,zones:[],round:0,count:0,low:0,high:0,bust:0,width:0,timer:null,idle:null,ending:false,base:0,step:0};
 let sheetKey='';
 const IDLE_MS=5000; // free-for-all: silence this long starts the end-of-round countdown
-const GOAD_MS=2000, GOAD_P=0.5, GOAD_MAX=3; // free-for-all: after this much quiet, maybe dangle a bonus on the next tap (at most GOAD_MAX per round)
-const GOAD_VALUES=[2,3,3,4,4,5,5,6,8,10]; // what a bonus tap can be worth: mostly small, now and then a big one
+const GOAD_MS=2000, GOAD_P=0.5, GOAD_MAX=2; // free-for-all: after this much quiet, maybe dangle a bonus on the next tap (at most GOAD_MAX per round)
+const GOAD_VALUES=[2,3,3,4,4,5]; // what a bonus tap can be worth: never more than 5
 // the bonus sticker's shape: a 16-point price burst
 const BURST='<svg class="burst" viewBox="-50 -50 100 100" aria-hidden="true"><polygon points="'+Array.from({length:32},(_,i)=>{const r=i%2?41.5:50,a=i*Math.PI/16;return (r*Math.cos(a)).toFixed(1)+','+(r*Math.sin(a)).toFixed(1)}).join(' ')+'"/></svg>';
 
@@ -584,7 +586,6 @@ function armIdle(){
     if(S.phase!=='tap'||S.ending||Math.random()>GOAD_P)return;
     S.goad=GOAD_VALUES[Math.floor(Math.random()*GOAD_VALUES.length)];S.goads++;
     const g=document.createElement('div');g.id='goad';g.className='capsule';
-    if(S.goad>=6)g.classList.add('hot');
     g.innerHTML=`${BURST}<div class="big">+${S.goad}</div><div class="lbl">Next tap</div>`;
     placeCapsule(g);
     if(navigator.vibrate)navigator.vibrate([20,40,20]);
@@ -593,7 +594,7 @@ function armIdle(){
     clearGoad();
     S.ending=true;
     const ov=document.createElement('div');ov.id='count';ov.className='soft capsule';
-    ov.innerHTML=`<div class="big" id="cd">3</div><div class="lbl">Round ending<br>Tap to keep going</div>`;
+    ov.innerHTML=`<div class="big" id="cd">3</div><div class="lbl">Round ending</div>`;
     placeCapsule(ov);
     let c=3;const tick=()=>{
       if(!S.ending)return;
