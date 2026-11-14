@@ -584,7 +584,7 @@ function placeCapsule(el){
 function armIdle(){
   clearTimeout(S.idle);clearTimeout(S.goadT);
   if(S.goads<GOAD_MAX&&!S.goad)S.goadT=setTimeout(()=>{
-    if(S.phase!=='tap'||S.ending||Math.random()>GOAD_P)return;
+    if(S.phase!=='tap'||S.ending||S.zones.filter(z=>!z.sat&&!z.bust).length<2||Math.random()>GOAD_P)return; // no dare for the last player standing
     S.goad=GOAD_VALUES[Math.floor(Math.random()*GOAD_VALUES.length)];S.goads++;
     const g=document.createElement('div');g.id='goad';g.className='capsule';
     g.innerHTML=`${BURST}<div class="big">+${S.goad}</div><div class="lbl">Next tap</div>`;
