@@ -110,8 +110,21 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 .capsule .lbl{font:var(--wt) 12px/1.4 var(--text);letter-spacing:.1em;text-transform:uppercase;text-align:left}
 .capsule.mid{height:60px;padding:0 24px 0 20px}
 .capsule.mid .big{font-size:40px}
-#goad{background:var(--now-ground);color:var(--now-fg);animation:drop .5s var(--spring) both,nudge 1.1s .5s ease-in-out infinite}
-@keyframes nudge{0%,100%{transform:translateX(-50%) rotate(-1.6deg)}50%{transform:translateX(-50%) rotate(1.6deg)}}
+/* the bonus: a price-burst sticker that slaps on, rocks, and turns slowly behind its number */
+#goad{width:136px;height:136px;padding:0;border-radius:0;flex-direction:column;justify-content:center;gap:1px;color:var(--now-fg);
+  animation:slap .55s var(--spring) both,nudge .9s .55s ease-in-out infinite}
+#goad .burst{position:absolute;inset:0;width:100%;height:100%;fill:var(--now-ground);z-index:-1;animation:spin 14s linear infinite}
+#goad .big{font-size:54px;animation:beat .9s .55s ease-in-out infinite}
+#goad .lbl{font-size:11px;text-align:center}
+#goad.hot{width:156px;height:156px}
+#goad.hot .big{font-size:64px}
+#goad.mid{width:104px;height:104px}
+#goad.mid .big{font-size:40px}
+#goad.mid .lbl{font-size:9.5px}
+@keyframes slap{from{transform:translateX(-50%) rotate(-40deg) scale(2.4);opacity:0}}
+@keyframes nudge{0%,100%{transform:translateX(-50%) rotate(-7deg)}50%{transform:translateX(-50%) rotate(7deg)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
 #count.soft{background:var(--t-fg);color:var(--t-ground)}
 #count.soft #cd{min-width:.6em;text-align:center;animation:tick .45s var(--spring) both}
 @keyframes tick{from{transform:scale(1.6);opacity:0}}
@@ -316,7 +329,7 @@ function applyWay(id,save){
         <li><b>Watch the odds.</b><span>The number in the middle is the chance the next tap busts. It starts tiny and climbs with every tap, at a different pace each round.</span></li>
         <li><b>Bank or bust.</b><span>Bust and you get zero for the round and sit out the rest of it while everyone else keeps going.</span></li>
         <li><b>Bonus taps.</b><span>Now and then a tag drops in with a number on it: the next tap is worth that many points instead of one. Same bust odds as any other tap.</span></li>
-        <li><b>Quiet ends it.</b><span>If nobody taps for 10 seconds, a 3-2-1 runs. Tap to keep going, or let it finish and everyone banks.</span></li>
+        <li><b>Quiet ends it.</b><span>If nobody taps for 5 seconds, a 3-2-1 runs. Tap to keep going, or let it finish and everyone banks.</span></li>
         <li><b>Win.</b><span>Most points after 10 rounds.</span></li>
       </ol>
       <p class="hint">Settings can make a bust end the round for everyone instead.</p>
@@ -343,8 +356,11 @@ const MAX_ROUNDS=10;
 const stage=document.getElementById('stage'), hub=document.getElementById('hub'), corner=document.getElementById('corner');
 const S={phase:'lobby',mode:'ffa',bustEnds:false,zones:[],round:0,count:0,low:0,high:0,bust:0,width:0,timer:null,idle:null,ending:false,base:0,step:0};
 let sheetKey='';
-const IDLE_MS=10000; // free-for-all: silence this long starts the end-of-round countdown
-const GOAD_MS=3500, GOAD_P=0.3, GOAD_MAX=1; // free-for-all: after this much quiet, maybe dangle a bonus on the next tap (at most GOAD_MAX per round)
+const IDLE_MS=5000; // free-for-all: silence this long starts the end-of-round countdown
+const GOAD_MS=2000, GOAD_P=0.5, GOAD_MAX=3; // free-for-all: after this much quiet, maybe dangle a bonus on the next tap (at most GOAD_MAX per round)
+const GOAD_VALUES=[2,3,3,4,4,5,5,6,8,10]; // what a bonus tap can be worth: mostly small, now and then a big one
+// the bonus sticker's shape: a 16-point price burst
+const BURST='<svg class="burst" viewBox="-50 -50 100 100" aria-hidden="true"><polygon points="'+Array.from({length:32},(_,i)=>{const r=i%2?41.5:50,a=i*Math.PI/16;return (r*Math.cos(a)).toFixed(1)+','+(r*Math.sin(a)).toFixed(1)}).join(' ')+'"/></svg>';
 
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const cx=()=>stage.clientWidth/2, cy=()=>stage.clientHeight/2;
@@ -388,8 +404,29 @@ function keepOut(){
   return {hw,hh,cx:kx,cy:ky};
 }
 function inKeepOut(x,y){const k=keepOut();return Math.abs(x-k.cx)<k.hw&&Math.abs(y-k.cy)<k.hh}
+// a finger rarely lands on a perfect spot. rather than refuse it, the disc slides to the nearest place it fits:
+// out of the middle box, off its neighbours, inside the screen. null only when the table really has no room there
+const GAP=160, EDGE=44; // px: centre-to-centre room a new disc is given, and how close to the screen edge a centre may sit
+function settle(x,y){
+  const W=stage.clientWidth,H=stage.clientHeight,k=keepOut(),cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+  for(let i=0;i<16;i++){
+    if(Math.abs(x-k.cx)<k.hw&&Math.abs(y-k.cy)<k.hh){ // in the middle box: leave by the nearest side that is on screen
+      const out=[[k.cx-k.hw,cl(y,EDGE,H-EDGE),x-(k.cx-k.hw)],[k.cx+k.hw,cl(y,EDGE,H-EDGE),k.cx+k.hw-x],[cl(x,EDGE,W-EDGE),k.cy-k.hh,y-(k.cy-k.hh)],[cl(x,EDGE,W-EDGE),k.cy+k.hh,k.cy+k.hh-y]]
+        .filter(o=>o[0]>=EDGE&&o[0]<=W-EDGE&&o[1]>=EDGE&&o[1]<=H-EDGE).sort((a,b)=>a[2]-b[2])[0];
+      if(!out)return null;
+      x=out[0];y=out[1];
+    }
+    for(const z of S.zones){const d=Math.hypot(x-z.x,y-z.y);
+      if(d<GAP){const a=d>1?Math.atan2(y-z.y,x-z.x):Math.atan2(y-k.cy,x-k.cx);x=z.x+Math.cos(a)*GAP;y=z.y+Math.sin(a)*GAP}}
+    x=cl(x,EDGE,W-EDGE);y=cl(y,EDGE,H-EDGE);
+  }
+  if(inKeepOut(x,y)||S.zones.some(z=>Math.hypot(x-z.x,y-z.y)<110))return null; // a little overlap between neighbours is fine
+  return {x,y};
+}
 function addZone(x,y){
-  if(inKeepOut(x,y)){
+  const spot=settle(x,y);
+  if(spot){x=spot.x;y=spot.y}
+  else{
     const ko=document.getElementById('keepout');if(ko){ko.classList.remove('nope');void ko.offsetWidth;ko.classList.add('nope')}
     if(navigator.vibrate)navigator.vibrate([30,30,30]);
     return;
@@ -545,9 +582,10 @@ function armIdle(){
   clearTimeout(S.idle);clearTimeout(S.goadT);
   if(S.goads<GOAD_MAX&&!S.goad)S.goadT=setTimeout(()=>{
     if(S.phase!=='tap'||S.ending||Math.random()>GOAD_P)return;
-    S.goad=rnd(2,5);S.goads++;
+    S.goad=GOAD_VALUES[Math.floor(Math.random()*GOAD_VALUES.length)];S.goads++;
     const g=document.createElement('div');g.id='goad';g.className='capsule';
-    g.innerHTML=`<div class="big">+${S.goad}</div><div class="lbl">Next tap</div>`;
+    if(S.goad>=6)g.classList.add('hot');
+    g.innerHTML=`${BURST}<div class="big">+${S.goad}</div><div class="lbl">Next tap</div>`;
     placeCapsule(g);
     if(navigator.vibrate)navigator.vibrate([20,40,20]);
   },GOAD_MS);
@@ -705,7 +743,8 @@ stage.addEventListener('pointerdown',e=>{
   if(e.target.closest('button,.overlay,#hub.sheet'))return;
   const r=stage.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
   const z=zoneAt(x,y);
-  if(S.phase==='lobby'){ if(z){S.zones=S.zones.filter(o=>o!==z)} else addZone(x,y); render(); }
+  if(S.phase==='lobby'){ // touching a disc itself takes it away; anywhere else plants one
+    if(z&&Math.hypot(z.x-x,z.y-y)<=75){S.zones=S.zones.filter(o=>o!==z)} else addZone(x,y); render(); }
   else if(S.phase==='tap'&&z)tap(z);
 });
 hub.addEventListener('click',e=>{
