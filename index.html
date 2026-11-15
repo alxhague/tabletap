@@ -46,7 +46,11 @@ body{margin:0;background:var(--t-ground);color:var(--fg);font-family:var(--text)
 .zone{position:absolute;left:0;top:0;width:150px;height:150px;z-index:1;pointer-events:none}
 .zone .face{position:absolute;inset:0;border-radius:50%;background:var(--d);color:var(--on);display:grid;place-items:center}
 .zone .big{font:var(--wd) 70px/1 var(--display);letter-spacing:-.02em;margin-right:.02em} /* the margin gives back the gap tracking leaves after the last figure, so the number sits centred */
-.zone .hand{display:block;height:98px;width:auto;fill:currentColor;transform:translateY(5px)}
+.hand{display:block;overflow:visible;fill:currentColor} /* a player's hand: solid in the disc's ink, details cut back to the disc colour */
+.hand .c{fill:var(--d)}
+.hand .l{fill:none;stroke:var(--d);stroke-width:4;stroke-linecap:round}
+.hand text{font-family:var(--display)}
+.zone .hand{height:104px;width:auto}
 .zone.fresh .face{animation:land .45s var(--spring) both}
 @keyframes land{from{transform:scale(0)}}
 .zone .face.pop{animation:press .3s var(--spring)}
@@ -166,13 +170,15 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   border-top:1px solid rgba(128,128,128,.4);border-top:1px solid color-mix(in srgb,currentColor 22%,transparent)}
 .rowb:last-child{border-bottom:1px solid rgba(128,128,128,.4);border-bottom:1px solid color-mix(in srgb,currentColor 22%,transparent)}
 .rowb[data-id]{cursor:pointer}
-.chip{width:30px;height:30px;border-radius:50%;background:var(--d);box-shadow:inset 0 0 0 1px rgba(128,128,128,.5);box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 30%,transparent)}
+.chip{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--on);background:var(--d);box-shadow:inset 0 0 0 1px rgba(128,128,128,.5);box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 30%,transparent)}
 .rowb .name{font:var(--wt) 19px/1.1 var(--text);text-align:left}
 .rowb .gain{font:var(--wt) 19px/1 var(--text);opacity:.6;text-align:right}
 .rowb .gain.b{opacity:1;font-size:12px;letter-spacing:.1em;text-transform:uppercase;background:var(--bust-ground);color:var(--bust-fg);padding:7px 10px 6px 11px;border-radius:999px}
 .rowb .total{font:var(--wd) clamp(40px,min(22vmin,calc(52vh/var(--n,4))),170px)/.9 var(--display);letter-spacing:-.03em;min-width:1.2em;text-align:right}
 .board.final .total{font-size:clamp(30px,min(10vmin,calc(32vh/var(--n,4))),72px)}
-.board.final .chip{width:26px;height:26px}
+.chip .hand{height:27px;width:auto}
+.board.final .chip{width:32px;height:32px}
+.board.final .chip .hand{height:23px}
 .board.final .rowb{padding-block:7px}
 .champ{font:var(--wd) clamp(60px,23vmin,240px)/.95 var(--display);letter-spacing:-.015em;text-wrap:balance;margin-top:-12px}
 .champ.tie{font-size:clamp(40px,13vmin,130px);line-height:1}
@@ -255,8 +261,27 @@ const WAYS=[
   {id:'butter',name:'Butter',table:['#ffee9c','#2433cc'],furn:'#ffdb5e',read:['#ffc4e1','#2433cc'],pause:['#b8f2cf','#0e4a33'],now:['#ff8fc8','#2433cc'],bust:['#f0432a','#ffee9c'],
    players:[['Green','#1f9d62','#ffee9c'],['Orange','#ff8a2b','#4a2a1a'],['Sky','#5fb8ff','#2433cc'],['Pink','#ff8fc8','#2433cc'],['Lilac','#b79cff','#0e4a33'],['Forest','#0e4a33','#b8f2cf'],['Cocoa','#4a2a1a','#ff8fc8'],['Blue','#2433cc','#ffee9c']]},
 ];
+/* Eight pointing hands, one per seat: the hand is the player's name. Each is drawn in a 100 x 150 box pointing down
+   (out toward its player once the disc is turned), as a solid shape in the disc's ink with details cut back to the
+   disc colour: class c = a cut-out fill, class l = a cut-out line. */
+const HANDS=[
+ {name:'Glove',svg:`<path d="M16 0h68l-7 30H23z"/><rect x="18" y="34" width="64" height="56" rx="18"/><rect x="54" y="62" width="25" height="86" rx="12.5"/><rect x="76" y="40" width="21" height="40" rx="10.5" transform="rotate(-14 86 60)"/>
+  <path class="l" d="M36 66v24M50 66v22"/><path class="l" d="M34 40v14M50 38v14M66 40v14" stroke-dasharray="1 7"/><path class="l" d="M22 22h56" stroke-dasharray="1 7"/><circle class="c" cx="50" cy="11" r="4.5"/>`},
+ {name:'Monster',svg:`<path d="M14 0l9 9 9-9 9 9 9-9 9 9 9-9 9 9 9-9v30l-9-7-9 7-9-7-9 7-9-7-9 7-9-7-9 7z"/><path d="M36 30h28c12 0 20 8 20 20v22c0 11-8 18-18 18H34c-10 0-18-7-18-18V50c0-12 8-20 20-20z"/><path d="M54 62h26v58l-13 30-13-30z"/><path d="M80 44l17 6-3 28-12 6z"/>
+  <path class="c" d="M59 122h16l-8 22z"/><circle class="c" cx="34" cy="50" r="5"/><circle class="c" cx="50" cy="60" r="3.5"/><circle class="c" cx="38" cy="72" r="3"/><path class="l" d="M36 78v12M50 76v14"/>`},
+ {name:'Robot',svg:`<rect x="26" y="0" width="48" height="12" rx="2"/><rect x="34" y="12" width="32" height="12"/><rect x="18" y="26" width="64" height="62" rx="6"/><rect x="55" y="92" width="24" height="16" rx="3"/><rect x="55" y="111" width="24" height="16" rx="3"/><path d="M55 130h24v10l-12 10-12-10z"/><rect x="85" y="40" width="13" height="18" rx="3"/><rect x="85" y="61" width="13" height="18" rx="3"/>
+  <rect x="21" y="92" width="14" height="10" rx="2"/><rect x="38" y="92" width="14" height="10" rx="2"/><circle class="c" cx="28" cy="36" r="3.5"/><circle class="c" cx="72" cy="36" r="3.5"/><circle class="c" cx="28" cy="78" r="3.5"/><circle class="c" cx="72" cy="78" r="3.5"/><path class="l" d="M40 46v22M50 46v22M60 46v22" stroke-width="5"/>`},
+ {name:'Skeleton',svg:`<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="11"><path d="M38 4v22M62 4v22"/><path d="M67 86v14M67 108v13M67 129v10"/><path d="M84 52l8 12M93 72l1 8"/><path d="M27 62v16M40 64v18M53 64v18" stroke-width="9"/><path d="M27 86v6M40 90v6M53 90v6" stroke-width="9"/></g>
+  <rect x="24" y="30" width="56" height="26" rx="12"/><path d="M60 54h14l3 26H57z"/><circle cx="38" cy="3" r="7"/><circle cx="62" cy="3" r="7"/><circle class="c" cx="40" cy="43" r="4"/><circle class="c" cx="54" cy="43" r="4"/><circle class="c" cx="68" cy="43" r="4"/>`},
+ {name:'Wizard',svg:`<path d="M2 0h96L80 44H20z"/><rect x="26" y="46" width="52" height="46" rx="16"/><rect x="54" y="70" width="21" height="62" rx="10.5"/><rect x="74" y="52" width="17" height="32" rx="8.5" transform="rotate(-14 82 68)"/><path class="l" d="M40 72v20M52 72v18"/>
+  <path class="c" d="M30 8l3 7 7 3-7 3-3 7-3-7-7-3 7-3zM62 14l2.4 5.6L70 22l-5.6 2.4L62 30l-2.4-5.6L54 22l5.600-2.4zM76 4l1.800 4.200L82 10l-4.200 1.800L76 16l-1.800-4.200L70 10l4.200-1.800z"/><path d="M64.500 134l3 6.500 6.500 3-6.500 3-3 6.500-3-6.500-6.500-3 6.500-3z" transform="translate(0 -4)"/>`},
+ {name:'Foam Finger',svg:`<path d="M22 0h56c8 0 14 6 14 14v46c0 16-6 26-14 30v40c0 11-7 20-17 20s-17-9-17-20V92H30C16 92 8 82 8 68V14C8 6 14 0 22 0z"/><text class="c" x="50" y="64" text-anchor="middle" font-size="46" font-weight="600">#1</text>`},
+ {name:'Cat',svg:`<path d="M30 0h40v40H30z"/><path d="M50 30c22 0 36 18 36 44 0 22-8 40-16 54-5 9-11 20-20 20s-15-11-20-20c-8-14-16-32-16-54 0-26 14-44 36-44z"/><ellipse class="c" cx="50" cy="82" rx="15" ry="13"/><ellipse class="c" cx="28" cy="100" rx="6.500" ry="9" transform="rotate(20 28 100)"/><ellipse class="c" cx="72" cy="100" rx="6.500" ry="9" transform="rotate(-20 72 100)"/><ellipse class="c" cx="41" cy="118" rx="6.500" ry="9" transform="rotate(8 41 118)"/><ellipse class="c" cx="59" cy="118" rx="6.500" ry="9" transform="rotate(-8 59 118)"/><path class="l" d="M30 10h40M30 24h40" stroke-width="6"/>`},
+ {name:'Alien',svg:`<rect x="38" y="0" width="24" height="34"/><path d="M50 26c18 0 30 10 30 26 0 14-10 24-30 24S20 66 20 52c0-16 12-26 30-26z"/><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="10"><path d="M60 66c4 20 5 40 5 66"/><path d="M34 66c-6 10-10 18-14 30"/><path d="M76 52c8 4 12 12 14 22"/></g><circle cx="65" cy="136" r="12"/><circle cx="19" cy="98" r="9"/><circle cx="90" cy="76" r="9"/><circle class="c" cx="65" cy="136" r="5"/><circle class="c" cx="50" cy="52" r="7"/>`},
+];
+const handSVG=ci=>`<svg class="hand" viewBox="0 0 100 150" aria-hidden="true">${HANDS[ci].svg}</svg>`;
 let WAY=WAYS[0];
-const P=z=>{const p=WAY.players[z.ci];return {name:p[0],bg:p[1],ink:p[2]}}; // a seat's pair in the colourway in force
+const P=z=>{const p=WAY.players[z.ci];return {name:HANDS[z.ci].name,bg:p[1],ink:p[2]}}; // a seat's pair in the colourway in force
 const lum=h=>[1,3,5].reduce((s,i,k)=>{const v=parseInt(h.slice(i,i+2),16)/255;return s+[.2126,.7152,.0722][k]*(v<=.03928?v/12.92:((v+.055)/1.055)**2.4)},0);
 function applyWay(id,save){
   WAY=WAYS.find(w=>w.id===id)||WAYS[0];
@@ -275,7 +300,6 @@ function applyWay(id,save){
 <body>
 <div id="stage">
   <!-- Manicule: U+261F from Noto Sans Symbols 2 (SIL Open Font License 1.1), as an outline -->
-  <svg id="defs" aria-hidden="true"><symbol id="manicule" viewBox="0 0 609 1146"><path fill="currentColor" d="M87 178Q79 178 73 174Q67 169 67 158V83Q67 59 90 42Q113 26 149 17Q185 8 226 4Q266 0 300 0Q334 0 374 4Q415 8 451 18Q487 27 510 43Q534 59 534 83V158Q534 178 510 178H508Q515 172 515 163Q515 142 494 128Q474 114 442 106Q409 99 372 96Q334 92 300 92Q266 92 228 96Q190 99 158 108Q125 116 104 130Q84 143 84 163Q84 172 94 178ZM430 1146Q361 1146 361 1048Q361 1031 362 999Q364 967 364 936Q364 912 363 889Q362 866 360 844Q337 860 302 860Q257 860 238 817Q232 803 223 803Q215 803 204 808Q192 813 178 813Q126 813 109 764Q107 757 104 756Q100 754 89 754Q44 754 22 712Q0 670 0 591Q0 536 10 475Q21 414 44 356Q66 297 100 252V179Q157 125 307 125Q345 125 382 132Q420 139 451 150Q482 162 499 178Q500 179 499 190Q498 201 498 214Q497 226 497 234Q497 251 500 264Q502 277 512 294Q522 310 544 339Q581 385 595 420Q609 456 609 501Q609 604 583 668Q570 701 562 726Q554 751 550 765Q546 783 535 797Q534 819 532 840Q530 862 528 884Q524 918 520 958Q515 998 511 1029Q504 1090 485 1118Q466 1146 430 1146ZM491 781H501V780Q503 780 508 772Q513 764 515 756Q519 742 528 715Q536 688 550 654Q573 597 573 501Q573 462 561 432Q549 403 515 361Q492 331 480 312Q468 292 464 274Q461 256 461 234Q461 226 462 216Q462 205 463 196Q437 181 394 171Q351 161 307 161Q188 161 136 196V264Q105 300 82 352Q59 405 46 466Q34 527 34 591V631Q38 619 44 602Q51 586 63 563Q79 533 98 509Q117 485 133 474Q141 471 153 471Q163 471 172 475Q180 479 186 484Q196 465 205 450Q214 434 221 426Q226 422 234 419Q241 416 251 415Q247 401 245 386Q243 371 243 354Q243 329 248 309H283Q281 317 280 330Q279 344 279 354Q279 375 282 392Q284 408 291 422Q317 437 320 467Q335 462 349 462Q375 462 394 478Q412 494 412 525Q412 536 409 548Q406 559 401 571Q406 575 412 579Q418 583 425 587Q434 553 446 541L470 568Q465 572 460 592Q454 611 449 637Q444 663 440 688Q437 713 437 728Q437 748 450 764Q463 781 491 781ZM174 781Q186 781 197 778Q208 776 215 773Q210 760 210 746Q210 734 213 712Q216 691 221 666Q226 641 233 620Q244 585 259 554Q274 523 289 499Q294 486 294 477Q294 463 284 456Q274 448 261 448Q249 448 238 455Q231 464 219 486Q207 509 194 536Q182 562 173 584Q156 628 146 662Q135 696 135 725Q135 748 144 764Q153 781 174 781ZM299 824Q317 824 334 820Q350 816 361 802Q362 797 362 792Q362 788 362 784Q362 755 352 745Q341 735 321 735Q326 686 336 656Q345 625 355 597Q361 578 371 558Q381 539 379 523Q378 515 372 506Q367 497 353 497Q347 497 339 500Q331 502 329 503Q318 517 301 546Q284 576 267 625Q257 654 252 688Q246 721 246 741Q246 762 268 798Q279 814 284 819Q289 824 299 824ZM98 724Q102 724 104 723V716Q104 675 118 638Q133 602 144 574Q149 562 156 547Q163 532 170 517Q160 507 145 505Q134 513 120 531Q105 549 94 569Q84 587 76 602Q68 618 63 637Q58 656 58 687Q58 711 72 718Q87 724 98 724ZM430 1110Q449 1110 458 1092Q468 1073 475 1024Q480 994 484 955Q488 916 492 879Q494 865 495 849Q496 833 497 816H492Q449 816 425 790Q401 764 401 730Q401 710 405 680Q409 651 416 622Q409 618 402 614Q395 609 388 605V606Q384 619 376 643Q367 667 361 706Q379 711 388 730Q397 749 397 771Q397 784 396 792Q396 801 394 808Q396 838 398 872Q400 907 400 936Q400 968 398 1000Q397 1031 397 1048Q397 1084 405 1097Q413 1110 430 1110Z"/></symbol></svg>
   <div id="corner"></div>
   <div id="hub"></div>
   <div id="ctrl">
@@ -461,7 +485,7 @@ function renderZones(){
     const ang=z.bust?0:Math.atan2(z.y-cy(),z.x-cx())*180/Math.PI-90;
     el.style.cssText=`left:${z.x}px;top:${z.y}px;transform:translate(-50%,-50%) rotate(${ang}deg);--d:${P(z).bg};--on:${P(z).ink}`+(hit?`;--hd:${(STAMP_DELAY-since).toFixed(3)}s`:'');
     let inner;
-    if(S.phase==='lobby')inner='<svg class="hand" viewBox="0 0 609 1146" aria-hidden="true"><use href="#manicule"/></svg>'; // "this spot is yours"
+    if(S.phase==='lobby')inner=handSVG(z.ci); // "this spot is yours"
     else if(z.bust)inner=BUST_X;
     else{
       let big='';
@@ -525,7 +549,7 @@ function renderHub(){
     setHub(`<div class="col">
       <div class="eyebrow">Round ${S.round} of ${MAX_ROUNDS}</div>
       <div class="board" style="--n:${rows.length}">${rows.map(({z,pts,total})=>`<div class="rowb"${ffa?'':` data-id="${z.id}"`}>
-        <span class="chip" style="--d:${P(z).bg}"></span><span class="name">${P(z).name}</span>
+        <span class="chip" style="--d:${P(z).bg};--on:${P(z).ink}">${handSVG(z.ci)}</span><span class="name">${P(z).name}</span>
         <span class="gain${z.bust?' b':''}">${z.bust?'Bust':'+'+pts}</span>
         <span class="total">${total}</span></div>`).join('')}</div>
       ${ffa?'':'<div class="line">Tap a name to flip anyone who showed zero fingers.</div>'}
@@ -539,7 +563,7 @@ function renderHub(){
       <div class="eyebrow">${solo?'Winner':'Tie game'}</div>
       <div class="champ${solo?'':' tie'}">${winners.map(z=>P(z).name).join(' &amp; ')}</div>
       <div class="board final" style="--n:${sorted.length}">${sorted.map(z=>`<div class="rowb">
-        <span class="chip" style="--d:${P(z).bg}"></span><span class="name">${P(z).name}</span><span></span>
+        <span class="chip" style="--d:${P(z).bg};--on:${P(z).ink}">${handSVG(z.ci)}</span><span class="name">${P(z).name}</span><span></span>
         <span class="total">${z.score}</span></div>`).join('')}</div>
       <button id="newtable">New game</button>
     </div>`,{key:'final',ground:solo?P(w).bg:'var(--pause-ground)',fg:solo?P(w).ink:'var(--pause-fg)',ox:solo?w.x+'px':'50%',oy:solo?w.y+'px':'50%'});
